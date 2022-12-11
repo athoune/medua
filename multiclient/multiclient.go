@@ -2,9 +2,9 @@ package multiclient
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -12,64 +12,81 @@ import (
 
 type Multiclient struct {
 	buffer  int
-	clients map[*url.URL]*http.Client
+	clients map[string]*http.Client
 }
 
-func New(buffer int, reqs ...*http.Request) (*Multiclient, error) {
-	mc := &Multiclient{
+func New(buffer int) *Multiclient {
+
+	return &Multiclient{
 		buffer:  buffer,
-		clients: make(map[*url.URL]*http.Client, len(reqs)),
+		clients: make(map[string]*http.Client, 0),
 	}
+
+}
+
+func (mc *Multiclient) Download(writer io.Writer, reqs ...*http.Request) error {
 	for _, req := range reqs {
 		if req.Method != http.MethodGet {
-			return nil, fmt.Errorf("Only GET method is handled, not %s", req.Method)
+			return fmt.Errorf("Only GET method is handled, not %s", req.Method)
 		}
-		mc.clients[req.URL] = &http.Client{}
-		mc.clients[req.URL].Timeout = 3 * time.Second
+		_, ok := mc.clients[req.URL.Host]
+		if !ok {
+			mc.clients[req.URL.Host] = &http.Client{
+				Timeout: 3 * time.Second,
+			}
+		}
 	}
 	w := &sync.WaitGroup{}
 	w.Add(len(reqs))
-	s := &sync.Mutex{}
-	broken := make([]*url.URL, 0)
 	size := 0
+	//range := 0
+	s := &sync.Mutex{}
+	usable := make([]*http.Request, 0)
 	for _, req := range reqs {
 		req.Method = http.MethodHead
 		go func() {
-			resp, err := mc.clients[req.URL].Do(req)
+			defer w.Done()
+			resp, err := mc.clients[req.URL.Host].Do(req)
 			if err != nil || resp.StatusCode != http.StatusOK {
 				log.Println(err)
-				s.Lock()
-				broken = append(broken, req.URL)
-				s.Unlock()
+				return
+			}
+			cl, err := strconv.Atoi(resp.Header.Get("content-length"))
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			if size == 0 {
+				size = cl
 			} else {
-				cl, err := strconv.Atoi(resp.Header.Get("content-length"))
-				if err != nil {
-					log.Println(err)
-					s.Lock()
-					broken = append(broken, req.URL)
-					s.Unlock()
-				} else {
-					if size == 0 {
-						size = cl
-					} else {
-						if size != cl {
-							panic("Different size")
-						}
-					}
+				if size != cl {
+					panic("Different size")
 				}
 			}
-			w.Done()
+			if resp.Header.Get("Accept-Range") != "bytes" {
+				log.Println("Accept-Range is mandatory")
+				return
+			}
+			s.Lock()
+			usable = append(usable, req)
+			s.Unlock()
 		}()
 	}
 	w.Wait()
-	for _, req := range reqs {
+
+	w.Add(len(usable))
+	for _, req := range usable {
 		go func() {
-			resp, err := c.Do(req)
+			defer w.Done()
+			resp, err := mc.clients[req.URL.Host].Do(req)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			if resp.StatusCode != http.StatusOK {
+
+			}
 		}()
 	}
-	return mc, nil
-}
-
-func (*Multiclient) Download() error {
-
+	return nil
 }
