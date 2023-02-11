@@ -27,10 +27,6 @@ func New(biteSize int64) *Multiclient {
 
 }
 
-type ClientPool interface {
-	LazyClient(string) *http.Client
-}
-
 func (mc *Multiclient) LazyClient(host string) *http.Client {
 	mc.lock.Lock()
 	defer mc.lock.Unlock()

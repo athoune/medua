@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type Download struct {
@@ -37,6 +38,7 @@ func (d *Download) head() error {
 	for _, req := range d.reqs {
 		req.Method = http.MethodHead
 		go func(r *http.Request) {
+			ts := time.Now()
 			defer d.wait.Done()
 			resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
 			if err != nil || resp.StatusCode != http.StatusOK {
@@ -81,6 +83,7 @@ func (d *Download) head() error {
 			d.lock.Lock()
 			usable = append(usable, r)
 			d.lock.Unlock()
+			log.Println("HEAD latency", r.URL.Host, time.Since(ts))
 		}(req)
 	}
 	d.wait.Wait()
@@ -100,31 +103,30 @@ func (d *Download) getAll() error {
 	}
 
 	oops := make(chan error, len(d.reqs))
-	for i, req := range d.reqs {
-		go func(name int, r *http.Request) {
-			for {
-				select {
-				case b := <-todo:
-					err := d.getOne(b, name, todo, r)
-					if err != nil {
-						if err != io.EOF {
-							// the fetch has failed, lets retry with another worker
-							todo <- b
-						}
-						oops <- err
-						log.Println("lets stop ", name, err)
-						return // lets kill this worker
+	for _, req := range d.reqs {
+		go func(r *http.Request) {
+			name := r.URL.Hostname()
+			for b := range todo {
+				err := d.getOne(b, name, todo, r)
+				if err != nil {
+					if err != io.EOF {
+						// the fetch has failed, lets retry with another worker
+						todo <- b
 					}
-					oops <- nil // one bite done
+					oops <- err
+					log.Println("lets stop ", name, err)
+					return // lets kill this worker
 				}
+				oops <- nil // one bite done
 			}
-		}(i, req)
+		}(req)
 	}
 	var err error
 	workers := len(d.reqs)
 	for err = range oops {
 		if err != nil {
 			workers -= 1
+			log.Println("Available workers", workers)
 			if workers == 0 && err != io.EOF {
 				return errors.New("All workers have failed.")
 			}
@@ -137,18 +139,22 @@ func (d *Download) getAll() error {
 		} else {
 			log.Println(err)
 		}
-		log.Println("todo", bites)
 	}
 	return nil
 }
 
-func (d *Download) getOne(offset int64, name int, todo chan int64, r *http.Request) error {
+func (d *Download) getOne(offset int64, name string, todo chan int64, r *http.Request) error {
+	ts := time.Now()
 	eof := false
 	end := offset + d.biteSize - 1
 	if end >= d.contentLength {
 		end = d.contentLength - 1
 		eof = true
 	}
+	if r.Header == nil {
+		r.Header = make(http.Header)
+	}
+	r.Header.Set("user-agent", "Medusa")
 	r.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
 	resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
 	if err != nil {
@@ -161,11 +167,12 @@ func (d *Download) getOne(offset int64, name int, todo chan int64, r *http.Reque
 	defer resp.Body.Close()
 	err = d.cake.Bite(offset, resp.Body, end-offset+1)
 	if err != nil {
-		log.Printf("%d can't write %d-%d content length: %s err: %s\n",
+		log.Printf("%s can't write %d-%d content length: %s err: %s\n",
 			name, offset, end,
 			resp.Header.Get("content-length"), err)
 		return err
 	}
+	log.Printf("%s %d-%d %v\n", r.URL.Host, offset, end, time.Since(ts))
 	if eof {
 		return io.EOF
 	}

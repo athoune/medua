@@ -7,6 +7,7 @@ import (
 	"sync"
 )
 
+// Cake can be eaten bite by bite, even unordered
 type Cake struct {
 	lock *sync.Mutex
 	file io.WriteSeeker
@@ -19,11 +20,14 @@ func NewCake(file io.WriteSeeker) *Cake {
 	}
 }
 
+// Bite set the cursor, read the body then copy expected size.
+// Thread safe.
 func (c *Cake) Bite(offset int64, body io.Reader, size int64) error {
 	buff, err := io.ReadAll(body)
 	if err != nil {
 		return err
 	}
+	// read can be slow and async, lock only the write step
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	_, err = c.file.Seek(offset, io.SeekStart)
@@ -37,7 +41,7 @@ func (c *Cake) Bite(offset int64, body io.Reader, size int64) error {
 	if int64(n) != size {
 		return fmt.Errorf("Uncomplete write %d of %d", n, size)
 	}
-	syncer, ok := c.file.(*os.File)
+	syncer, ok := c.file.(*os.File) // if it's a File, lets sync
 	if ok {
 		err = syncer.Sync()
 		if err != nil {
