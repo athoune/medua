@@ -14,7 +14,6 @@ type Download struct {
 	cake          *Cake
 	reqs          []*http.Request
 	contentLength int64
-	wait          *sync.WaitGroup
 	lock          *sync.Mutex
 	clients       ClientPool
 	biteSize      int64
@@ -23,7 +22,6 @@ type Download struct {
 
 func (d *Download) clean() {
 	d.contentLength = -1
-	d.wait = &sync.WaitGroup{}
 	d.lock = &sync.Mutex{}
 	d.written = 0
 }
