@@ -22,9 +22,9 @@ func TestCake(t *testing.T) {
 	assert.NoError(t, err)
 
 	cake := NewCake(f)
-	err = cake.Bite(3, bytes.NewBuffer([]byte("lo")))
+	err = cake.Bite(3, bytes.NewBuffer([]byte("lo")), 2)
 	assert.NoError(t, err)
-	err = cake.Bite(0, bytes.NewBuffer([]byte("hel")))
+	err = cake.Bite(0, bytes.NewBuffer([]byte("hel")), 3)
 	assert.NoError(t, err)
 
 	err = f.Sync()

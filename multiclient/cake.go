@@ -1,6 +1,7 @@
 package multiclient
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -19,7 +20,7 @@ func NewCake(file io.WriteSeeker) *Cake {
 	}
 }
 
-func (c *Cake) Bite(offset int64, body io.Reader) error {
+func (c *Cake) Bite(offset int64, body io.Reader, size int64) error {
 	buff, err := io.ReadAll(body)
 	if err != nil {
 		return err
@@ -33,6 +34,9 @@ func (c *Cake) Bite(offset int64, body io.Reader) error {
 	n, err := c.file.Write(buff)
 	if err != nil {
 		return err
+	}
+	if int64(n) != size {
+		return fmt.Errorf("Uncomplete write %d vs %d", n, size)
 	}
 	log.Println("Write", offset, n, len(buff))
 	syncer, ok := c.file.(*os.File)

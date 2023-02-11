@@ -160,7 +160,7 @@ func (d *Download) getOne(offset int64, name int, todo chan int64, r *http.Reque
 		return fmt.Errorf("Bad status %s", resp.Status)
 	}
 	defer resp.Body.Close()
-	err = d.cake.Bite(offset, resp.Body)
+	err = d.cake.Bite(offset, resp.Body, end-offset)
 	if err != nil {
 		log.Println(name, "can't write ", offset, end, err)
 		return err
