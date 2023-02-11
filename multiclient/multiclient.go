@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 )
@@ -63,12 +62,5 @@ func (mc *Multiclient) Download(writer io.WriteSeeker, reqs ...*http.Request) er
 		return err
 	}
 
-	f, ok := writer.(*os.File)
-	if ok {
-		err = f.Sync()
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }

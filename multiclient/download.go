@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -27,68 +26,6 @@ func (d *Download) clean() {
 	d.wait = &sync.WaitGroup{}
 	d.lock = &sync.Mutex{}
 	d.written = 0
-}
-
-func (d *Download) head() error {
-	d.clean()
-	d.wait.Add(len(d.reqs))
-	usable := make([]*http.Request, 0)
-	crange := 0
-	lock := &sync.Mutex{}
-	for _, req := range d.reqs {
-		req.Method = http.MethodHead
-		go func(r *http.Request) {
-			ts := time.Now()
-			defer d.wait.Done()
-			resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
-			if err != nil || resp.StatusCode != http.StatusOK {
-				log.Println(r.URL, resp.Status, err)
-				return
-			}
-			cl, err := strconv.Atoi(resp.Header.Get("content-length"))
-			if err != nil {
-				log.Println("Can't parse content-length", err)
-				return
-			}
-			lock.Lock()
-			if d.contentLength == -1 {
-				d.contentLength = int64(cl)
-				lock.Unlock()
-			} else {
-				defer lock.Unlock()
-				if d.contentLength != int64(cl) {
-					log.Fatal("Different size ", d.contentLength, cl)
-				}
-			}
-			ra := r.Header.Get("range")
-			if ra != "" {
-				rav, err := strconv.Atoi(ra)
-				if err != nil {
-					panic(err)
-				}
-				if crange == -1 {
-					crange = rav
-				} else {
-					if crange != rav {
-						// FIXME
-						panic(fmt.Errorf("range mismatch: %d != %d", crange, rav))
-					}
-				}
-			}
-			if resp.Header.Get("Accept-Ranges") != "bytes" {
-				log.Fatal("Accept-Ranges is mandatory ", resp.Header.Get("Accept-Ranges"))
-			}
-			// Lets restore initial method : GET
-			r.Method = http.MethodGet
-			d.lock.Lock()
-			usable = append(usable, r)
-			d.lock.Unlock()
-			log.Println("HEAD latency", r.URL.Host, time.Since(ts))
-		}(req)
-	}
-	d.wait.Wait()
-	d.reqs = usable
-	return nil
 }
 
 func (d *Download) getAll() error {
