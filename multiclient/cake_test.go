@@ -27,6 +27,9 @@ func TestCake(t *testing.T) {
 	err = cake.Bite(0, bytes.NewBuffer([]byte("hel")))
 	assert.NoError(t, err)
 
+	err = f.Sync()
+	assert.NoError(t, err)
+
 	_, err = f.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
 	content, err := io.ReadAll(f)

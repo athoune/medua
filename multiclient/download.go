@@ -1,6 +1,7 @@
 package multiclient
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,13 +11,13 @@ import (
 )
 
 type Download struct {
-	writer        io.Writer
+	cake          *Cake
 	reqs          []*http.Request
-	contentLength int
+	contentLength int64
 	wait          *sync.WaitGroup
 	lock          *sync.Mutex
 	clients       ClientPool
-	biteSize      int
+	biteSize      int64
 	written       int
 }
 
@@ -29,27 +30,33 @@ func (d *Download) clean() {
 
 func (d *Download) head() error {
 	d.clean()
+	d.wait.Add(len(d.reqs))
 	usable := make([]*http.Request, 0)
 	crange := 0
+	lock := &sync.Mutex{}
 	for _, req := range d.reqs {
 		req.Method = http.MethodHead
 		go func(r *http.Request) {
 			defer d.wait.Done()
 			resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
 			if err != nil || resp.StatusCode != http.StatusOK {
-				log.Println(err)
+				log.Println(r.URL, resp.Status, err)
 				return
 			}
+			log.Println(r.URL, resp.Header)
 			cl, err := strconv.Atoi(resp.Header.Get("content-length"))
 			if err != nil {
-				log.Println(err)
+				log.Println("Can't parse content-length", err)
 				return
 			}
-			if d.contentLength == 0 {
-				d.contentLength = cl
+			lock.Lock()
+			if d.contentLength == -1 {
+				d.contentLength = int64(cl)
+				lock.Unlock()
 			} else {
-				if d.contentLength != cl {
-					panic("Different size")
+				defer lock.Unlock()
+				if d.contentLength != int64(cl) {
+					log.Fatal("Different size ", d.contentLength, cl)
 				}
 			}
 			ra := r.Header.Get("range")
@@ -67,10 +74,11 @@ func (d *Download) head() error {
 					}
 				}
 			}
-			if resp.Header.Get("Accept-Range") != "bytes" {
-				log.Println("Accept-Range is mandatory")
-				return
+			if resp.Header.Get("Accept-Ranges") != "bytes" {
+				log.Fatal("Accept-Ranges is mandatory ", resp.Header.Get("Accept-Ranges"))
 			}
+			// Lets restore initial method : GET
+			r.Method = http.MethodGet
 			d.lock.Lock()
 			usable = append(usable, r)
 			d.lock.Unlock()
@@ -81,23 +89,85 @@ func (d *Download) head() error {
 	return nil
 }
 
-func (d *Download) get() error {
-	for d.written <= d.contentLength {
-		d.wait.Add(len(d.reqs))
-		for _, req := range d.reqs {
-			go func(r *http.Request) {
-				defer d.wait.Done()
-				resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
-				if err != nil {
-					log.Fatal(err)
-					return
-				}
-				if resp.StatusCode != http.StatusOK {
+func (d *Download) getAll() error {
+	bites := d.contentLength / d.biteSize
+	if d.contentLength%d.biteSize > 0 {
+		bites += 1
+	}
+	todo := make(chan int64, bites)
+	var i int64
+	for i = 0; i < bites; i++ {
+		todo <- i * d.biteSize
+	}
 
+	oops := make(chan error, len(d.reqs))
+	for i, req := range d.reqs {
+		go func(name int, r *http.Request) {
+			for {
+				select {
+				case b := <-todo:
+					err := d.getOne(b, name, todo, r)
+					if err != nil {
+						if err != io.EOF {
+							// the fetch has failed, lets retry with another worker
+							todo <- b
+						}
+						oops <- err
+						log.Println("lets stop ", name, err)
+						return // lets kill this worker
+					}
+					oops <- nil // one bite done
 				}
-			}(req)
+			}
+		}(i, req)
+	}
+	var err error
+	workers := len(d.reqs)
+	for err = range oops {
+		if err != nil {
+			workers -= 1
+			if workers == 0 && err != io.EOF {
+				return errors.New("All workers have failed.")
+			}
 		}
-		d.wait.Wait()
+		if err == nil || err == io.EOF {
+			bites -= 1
+			if bites == 0 {
+				return nil
+			}
+		} else {
+			log.Println(err)
+		}
+		log.Println("todo", bites)
+	}
+	return nil
+}
+
+func (d *Download) getOne(offset int64, name int, todo chan int64, r *http.Request) error {
+	eof := false
+	end := offset + d.biteSize
+	if end >= d.contentLength {
+		end = d.contentLength
+		eof = true
+	}
+	r.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
+	resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		log.Println("Can't fetch ", resp.Status, r.Header)
+		return fmt.Errorf("Bad status %s", resp.Status)
+	}
+	defer resp.Body.Close()
+	err = d.cake.Bite(offset, resp.Body)
+	if err != nil {
+		log.Println(name, "can't write ", offset, end, err)
+		return err
+	}
+	log.Println("get ", name, offset, end)
+	if eof {
+		return io.EOF
 	}
 	return nil
 }

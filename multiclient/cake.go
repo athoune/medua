@@ -2,6 +2,7 @@ package multiclient
 
 import (
 	"io"
+	"log"
 	"os"
 	"sync"
 )
@@ -29,10 +30,11 @@ func (c *Cake) Bite(offset int64, body io.Reader) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.file.Write(buff)
+	n, err := c.file.Write(buff)
 	if err != nil {
 		return err
 	}
+	log.Println("Write", offset, n, len(buff))
 	syncer, ok := c.file.(*os.File)
 	if ok {
 		err = syncer.Sync()
