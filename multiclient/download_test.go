@@ -1,7 +1,9 @@
 package multiclient
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -21,11 +23,18 @@ func TestDownload(t *testing.T) {
 	file := filepath.Join(dir, "demo.iso")
 	f, err := os.OpenFile(file, os.O_CREATE+os.O_WRONLY, 0644)
 	assert.NoError(t, err)
-	for i := 0; i < 1024*1024; i++ {
-		_, err = f.Write([]byte("hello"))
+	h := sha256.New()
+	o, err := os.Open("/dev/random")
+	assert.NoError(t, err)
+	noise := make([]byte, 5*1024)
+	for i := 0; i < 1024; i++ {
+		n, err := o.Read(noise)
+		assert.Equal(t, 5*1024, n)
+		_, err = f.Write(noise)
 		if err != nil {
 			panic(err)
 		}
+		h.Write(noise)
 	}
 	s, err := f.Stat()
 	assert.NoError(t, err)
@@ -44,7 +53,7 @@ func TestDownload(t *testing.T) {
 
 	client := New(1024 * 1024)
 
-	testPath := "/tmp/out" //filepath.Join(dir, "out")
+	testPath := filepath.Join(dir, "out")
 	out, err := os.OpenFile(testPath, os.O_WRONLY+os.O_CREATE, 0644)
 	assert.NoError(t, err)
 	err = client.Download(out, reqs...)
@@ -55,5 +64,12 @@ func TestDownload(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, s.Size(), s2.Size(), "input and output has same size")
+	out, err = os.Open(testPath)
+	assert.NoError(t, err)
+	defer out.Close()
+	h2 := sha256.New()
+	_, err = io.Copy(h2, out)
+	assert.NoError(t, err)
+	assert.Equal(t, h.Sum(nil), h2.Sum(nil))
 
 }

@@ -3,7 +3,6 @@ package multiclient
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sync"
 )
@@ -36,9 +35,8 @@ func (c *Cake) Bite(offset int64, body io.Reader, size int64) error {
 		return err
 	}
 	if int64(n) != size {
-		return fmt.Errorf("Uncomplete write %d vs %d", n, size)
+		return fmt.Errorf("Uncomplete write %d of %d", n, size)
 	}
-	log.Println("Write", offset, n, len(buff))
 	syncer, ok := c.file.(*os.File)
 	if ok {
 		err = syncer.Sync()

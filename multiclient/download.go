@@ -43,7 +43,6 @@ func (d *Download) head() error {
 				log.Println(r.URL, resp.Status, err)
 				return
 			}
-			log.Println(r.URL, resp.Header)
 			cl, err := strconv.Atoi(resp.Header.Get("content-length"))
 			if err != nil {
 				log.Println("Can't parse content-length", err)
@@ -145,9 +144,9 @@ func (d *Download) getAll() error {
 
 func (d *Download) getOne(offset int64, name int, todo chan int64, r *http.Request) error {
 	eof := false
-	end := offset + d.biteSize
+	end := offset + d.biteSize - 1
 	if end >= d.contentLength {
-		end = d.contentLength
+		end = d.contentLength - 1
 		eof = true
 	}
 	r.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
@@ -160,12 +159,13 @@ func (d *Download) getOne(offset int64, name int, todo chan int64, r *http.Reque
 		return fmt.Errorf("Bad status %s", resp.Status)
 	}
 	defer resp.Body.Close()
-	err = d.cake.Bite(offset, resp.Body, end-offset)
+	err = d.cake.Bite(offset, resp.Body, end-offset+1)
 	if err != nil {
-		log.Println(name, "can't write ", offset, end, err)
+		log.Printf("%d can't write %d-%d content length: %s err: %s\n",
+			name, offset, end,
+			resp.Header.Get("content-length"), err)
 		return err
 	}
-	log.Println("get ", name, offset, end)
 	if eof {
 		return io.EOF
 	}
