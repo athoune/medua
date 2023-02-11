@@ -10,11 +10,11 @@ import (
 )
 
 func main() {
-	if len(os.Args) == 1 {
-		log.Fatal("Give me some urls")
+	if len(os.Args) <= 2 {
+		log.Fatal(os.Args[0], "destination urls…")
 	}
-	urls := make([]*http.Request, len(os.Args)-1)
-	for i, u := range os.Args[1:] {
+	urls := make([]*http.Request, len(os.Args)-2)
+	for i, u := range os.Args[2:] {
 		uu, err := url.Parse(u)
 		if err != nil {
 			log.Fatal(err)
@@ -24,8 +24,8 @@ func main() {
 			URL:    uu,
 		}
 	}
-	mc := multiclient.New(10 * 1024 * 1024)
-	tmp, err := os.Open("/tmp/medusa")
+	mc := multiclient.New(1024 * 1024) // 1Mo
+	tmp, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
