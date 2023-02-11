@@ -9,5 +9,8 @@ medusa-get: bin
 bin:
 	mkdir -p bin
 
+test:
+	go test -v -cover ./multiclient
+
 clean:
 	rm -rf bin
