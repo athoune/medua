@@ -51,21 +51,22 @@ func (t *Todo) Reset(poz int64) error {
 	return nil
 }
 
-func (t *Todo) Next() (int64, error) {
+func (t *Todo) Next() int64 {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	for i := t.cursor; i < t.size; i++ {
 		if !t.doing[i] {
-			if t.wal != nil {
-				err := t.wal.Doing(i)
-				if err != nil {
-					return -1, err
-				}
-			}
 			t.doing[i] = true
 			t.cursor = i + 1
-			return i, nil
+			return i
 		}
 	}
-	return -1, nil
+	return -1
+}
+
+func (t *Todo) Done(poz int64) error {
+	if t.wal != nil {
+		return t.wal.Done(poz)
+	}
+	return nil
 }

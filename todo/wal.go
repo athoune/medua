@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+type Line struct {
+	Doing bool
+	Chunk int64
+}
+
 type Wal struct {
 	file *os.File
 	size int64
@@ -60,12 +65,7 @@ func ReadWal(file *os.File) (*Todo, error) {
 	return todo, nil
 }
 
-type Line struct {
-	Doing bool
-	Chunk int64
-}
-
-func (w *Wal) Doing(chunk int64) error {
+func (w *Wal) Done(chunk int64) error {
 	return w.log(Line{
 		Doing: true,
 		Chunk: chunk,
