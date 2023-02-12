@@ -1,7 +1,6 @@
 package todo
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +33,6 @@ func TestAsync(t *testing.T) {
 		go func() {
 			for {
 				d := todo.Next()
-				log.Println(d)
 				if d == -1 {
 					break
 				}
