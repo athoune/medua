@@ -48,27 +48,27 @@ func (d *Download) getAll() error {
 
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {
-		go func(r *http.Request) {
-			name := r.URL.Hostname()
+		go func(req *http.Request) {
+			name := req.URL.Hostname()
 			for {
 				b := todo.Next()
 				if b == -1 {
-					break
+					oops <- io.EOF
+					return
 				}
-				err := d.getOne(b*d.biteSize, name, r)
+				err := d.getOne(b*d.biteSize, name, req)
 				if err != nil {
-					if err != io.EOF {
-						// the fetch has failed, lets retry with another worker
-						todo.Reset(b)
-					}
+					// the fetch has failed, lets retry with another worker
+					todo.Reset(b)
 					oops <- err
 					log.Println("lets stop ", name, err)
 					return // lets kill this worker
 				}
-				err = todo.Done(b)
+				err = todo.Done(b) // ack
 				if err != nil {
+					log.Println("can't write wal", err)
 					oops <- err
-					break
+					return
 				}
 				oops <- nil // one bite done
 			}
@@ -80,17 +80,17 @@ func (d *Download) getAll() error {
 		if err != nil {
 			workers -= 1
 			log.Println("Available workers", workers)
-			if workers == 0 && err != io.EOF {
-				return errors.New("All workers have failed.")
+			if workers == 0 {
+				if err == io.EOF {
+					return nil
+				}
+				return errors.New("all workers have failed")
 			}
-		}
-		if err == nil || err == io.EOF {
+		} else {
 			bites -= 1
 			if bites == 0 {
 				return nil
 			}
-		} else {
-			log.Println(err)
 		}
 	}
 	return nil
@@ -98,11 +98,9 @@ func (d *Download) getAll() error {
 
 func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	ts := time.Now()
-	eof := false
 	end := offset + d.biteSize - 1
 	if end >= d.contentLength {
 		end = d.contentLength - 1
-		eof = true
 	}
 	if r.Header == nil {
 		r.Header = make(http.Header)
@@ -126,8 +124,5 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 		return err
 	}
 	log.Printf("%s %d-%d %v\n", r.URL.Host, offset, end, time.Since(ts))
-	if eof {
-		return io.EOF
-	}
 	return nil
 }
