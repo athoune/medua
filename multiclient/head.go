@@ -21,7 +21,11 @@ func (d *Download) head() error {
 			ts := time.Now()
 			resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
 			if err != nil || resp.StatusCode != http.StatusOK {
-				log.Println(r.URL, resp.Status, err)
+				if resp != nil {
+					log.Println(r.URL, resp.Status, err)
+				} else {
+					log.Println(r.URL, err)
+				}
 				events <- nil
 				return
 			}
@@ -68,7 +72,7 @@ func (d *Download) head() error {
 			usable = append(usable, r)
 			d.lock.Unlock()
 			events <- nil
-			log.Println("HEAD latency", r.URL.Host, time.Since(ts))
+			log.Println("HEAD latency", resp.Proto, r.URL.Host, time.Since(ts))
 		}(req)
 	}
 	var err error
