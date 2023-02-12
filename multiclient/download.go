@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	_todo "github.com/athoune/medusa/todo"
 )
 
 type Download struct {
@@ -31,22 +33,22 @@ func (d *Download) getAll() error {
 	if d.contentLength%d.biteSize > 0 {
 		bites += 1
 	}
-	todo := make(chan int64, bites)
-	var i int64
-	for i = 0; i < bites; i++ {
-		todo <- i * d.biteSize
-	}
+	todo := _todo.New(bites)
 
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {
 		go func(r *http.Request) {
 			name := r.URL.Hostname()
-			for b := range todo {
-				err := d.getOne(b, name, todo, r)
+			for {
+				b := todo.Next()
+				if b == -1 {
+					break
+				}
+				err := d.getOne(b*d.biteSize, name, r)
 				if err != nil {
 					if err != io.EOF {
 						// the fetch has failed, lets retry with another worker
-						todo <- b
+						todo.Reset(b)
 					}
 					oops <- err
 					log.Println("lets stop ", name, err)
@@ -78,7 +80,7 @@ func (d *Download) getAll() error {
 	return nil
 }
 
-func (d *Download) getOne(offset int64, name string, todo chan int64, r *http.Request) error {
+func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	ts := time.Now()
 	eof := false
 	end := offset + d.biteSize - 1
