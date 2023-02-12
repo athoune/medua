@@ -13,7 +13,7 @@ bin:
 	mkdir -p bin
 
 test:
-	go test -v -cover ./multiclient
+	go test -v -cover ./multiclient ./todo
 
 clean:
 	rm -rf bin
