@@ -29,16 +29,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer wal.Close()
 	mc := multiclient.New(1024 * 1024) // 1Mo
 	mc.Timeout = 15 * time.Second
 
-	tmp, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
+	dest, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = mc.Download(tmp, wal, urls...)
+	defer dest.Close()
+	err = mc.Download(dest, wal, urls...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmp.Close()
 }
