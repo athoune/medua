@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/athoune/medusa/multiclient"
 )
@@ -25,6 +26,7 @@ func main() {
 		}
 	}
 	mc := multiclient.New(1024 * 1024) // 1Mo
+	mc.Timeout = 15 * time.Second
 	tmp, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)

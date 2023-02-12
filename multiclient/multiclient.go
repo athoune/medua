@@ -12,7 +12,7 @@ type Multiclient struct {
 	biteSize int64
 	lock     *sync.Mutex
 	clients  map[string]*http.Client
-	timeout  time.Duration
+	Timeout  time.Duration
 }
 
 func New(biteSize int64) *Multiclient {
@@ -21,7 +21,7 @@ func New(biteSize int64) *Multiclient {
 		biteSize: biteSize,
 		lock:     &sync.Mutex{},
 		clients:  make(map[string]*http.Client, 0),
-		timeout:  30 * time.Second,
+		Timeout:  30 * time.Second,
 	}
 
 }
@@ -32,7 +32,7 @@ func (mc *Multiclient) LazyClient(host string) *http.Client {
 	c, ok := mc.clients[host]
 	if !ok {
 		c = &http.Client{
-			Timeout: mc.timeout,
+			Timeout: mc.Timeout,
 		}
 		mc.clients[host] = c
 	}
