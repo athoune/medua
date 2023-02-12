@@ -1,6 +1,7 @@
 package multiclient
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -48,31 +49,33 @@ func (d *Download) getAll() error {
 
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {
-		go func(req *http.Request) {
-			name := req.URL.Hostname()
-			for {
-				b := todo.Next()
-				if b == -1 {
-					oops <- io.EOF
-					return
+		for i := 0; i < 2; i++ {
+			go func(req *http.Request) {
+				name := req.URL.Hostname()
+				for {
+					b := todo.Next()
+					if b == -1 {
+						oops <- io.EOF
+						return
+					}
+					err := d.getOne(b*d.biteSize, name, req)
+					if err != nil {
+						// the fetch has failed, lets retry with another worker
+						todo.Reset(b)
+						oops <- err
+						log.Println("lets stop ", name, err)
+						return // lets kill this worker
+					}
+					err = todo.Done(b) // ack
+					if err != nil {
+						log.Println("can't write wal", err)
+						oops <- err
+						return
+					}
+					oops <- nil // one bite done
 				}
-				err := d.getOne(b*d.biteSize, name, req)
-				if err != nil {
-					// the fetch has failed, lets retry with another worker
-					todo.Reset(b)
-					oops <- err
-					log.Println("lets stop ", name, err)
-					return // lets kill this worker
-				}
-				err = todo.Done(b) // ack
-				if err != nil {
-					log.Println("can't write wal", err)
-					oops <- err
-					return
-				}
-				oops <- nil // one bite done
-			}
-		}(req)
+			}(req.Clone(context.TODO()))
+		}
 	}
 	var err error
 	workers := len(d.reqs)
