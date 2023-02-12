@@ -3,12 +3,13 @@ package multiclient
 import (
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type Multiclient struct {
@@ -32,11 +33,15 @@ func New(biteSize int64) *Multiclient {
 }
 
 func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*http.Request) error {
-	spew.Dump(mc.client.Transport)
 	for _, req := range reqs {
 		if req.Method != http.MethodGet {
 			return fmt.Errorf("Only GET method is handled, not %s", req.Method)
 		}
+		ips, err := net.LookupIP(strings.Split(req.URL.Host, ":")[0])
+		if err != nil {
+			return err
+		}
+		log.Println(req.URL.Host, ips)
 	}
 	download := &Download{
 		reqs:     reqs,
