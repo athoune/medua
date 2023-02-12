@@ -18,7 +18,7 @@ type Download struct {
 	reqs          []*http.Request
 	contentLength int64
 	lock          *sync.Mutex
-	clients       ClientPool
+	client        *http.Client
 	biteSize      int64
 	written       int
 	wal           *os.File
@@ -107,7 +107,7 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	}
 	r.Header.Set("user-agent", "Medusa")
 	r.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
-	resp, err := d.clients.LazyClient(r.URL.Host).Do(r)
+	resp, err := d.client.Do(r)
 	if err != nil {
 		return err
 	}

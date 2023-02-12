@@ -7,12 +7,14 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type Multiclient struct {
 	biteSize int64
 	lock     *sync.Mutex
-	clients  map[string]*http.Client
+	client   *http.Client
 	Timeout  time.Duration
 }
 
@@ -21,26 +23,16 @@ func New(biteSize int64) *Multiclient {
 	return &Multiclient{
 		biteSize: biteSize,
 		lock:     &sync.Mutex{},
-		clients:  make(map[string]*http.Client, 0),
-		Timeout:  30 * time.Second,
+		client: &http.Client{
+			Transport: http.DefaultTransport,
+		},
+		Timeout: 30 * time.Second,
 	}
 
-}
-
-func (mc *Multiclient) LazyClient(host string) *http.Client {
-	mc.lock.Lock()
-	defer mc.lock.Unlock()
-	c, ok := mc.clients[host]
-	if !ok {
-		c = &http.Client{
-			Timeout: mc.Timeout,
-		}
-		mc.clients[host] = c
-	}
-	return c
 }
 
 func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*http.Request) error {
+	spew.Dump(mc.client.Transport)
 	for _, req := range reqs {
 		if req.Method != http.MethodGet {
 			return fmt.Errorf("Only GET method is handled, not %s", req.Method)
@@ -48,7 +40,7 @@ func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*ht
 	}
 	download := &Download{
 		reqs:     reqs,
-		clients:  mc,
+		client:   mc.client,
 		biteSize: mc.biteSize,
 		cake:     NewCake(writer),
 		wal:      wal,
