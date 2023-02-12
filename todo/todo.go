@@ -2,6 +2,7 @@ package todo
 
 import (
 	"errors"
+	"os"
 	"sync"
 )
 
@@ -10,6 +11,7 @@ type Todo struct {
 	cursor int64
 	lock   sync.Mutex
 	size   int64
+	wal    *Wal
 }
 
 func New(size int64) *Todo {
@@ -19,28 +21,51 @@ func New(size int64) *Todo {
 		size:   size,
 	}
 }
+
+func NewWithWal(file *os.File, size int64) (*Todo, error) {
+	todo := New(size)
+	wal, err := CreateWal(file, size)
+	if err != nil {
+		return nil, err
+	}
+	todo.wal = wal
+	return todo, nil
+}
+
 func (t *Todo) Reset(poz int64) error {
 	if poz >= t.size {
 		return errors.New("out of bound")
 	}
 	t.lock.Lock()
+	defer t.lock.Unlock()
+	if t.wal != nil {
+		err := t.wal.Undo(poz)
+		if err != nil {
+			return err
+		}
+	}
 	t.doing[poz] = false
 	if poz < t.cursor {
 		t.cursor = poz
 	}
-	t.lock.Unlock()
 	return nil
 }
 
-func (t *Todo) Next() int64 {
+func (t *Todo) Next() (int64, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	for i := t.cursor; i < t.size; i++ {
 		if !t.doing[i] {
+			if t.wal != nil {
+				err := t.wal.Doing(i)
+				if err != nil {
+					return -1, err
+				}
+			}
 			t.doing[i] = true
 			t.cursor = i + 1
-			return i
+			return i, nil
 		}
 	}
-	return -1
+	return -1, nil
 }

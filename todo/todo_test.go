@@ -9,14 +9,28 @@ import (
 
 func TestTodo(t *testing.T) {
 	todo := New(5)
-	assert.Equal(t, int64(0), todo.Next())
-	assert.Equal(t, int64(1), todo.Next())
-	assert.Equal(t, int64(2), todo.Next())
+	n, err := todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), n)
+	n, err = todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), n)
+	n, err = todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(2), n)
 	assert.NoError(t, todo.Reset(1))
-	assert.Equal(t, int64(1), todo.Next())
-	assert.Equal(t, int64(3), todo.Next())
-	assert.Equal(t, int64(4), todo.Next())
-	assert.Equal(t, int64(-1), todo.Next())
+	n, err = todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), n)
+	n, err = todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(3), n)
+	n, err = todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(4), n)
+	n, err = todo.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(-1), n)
 	assert.Error(t, todo.Reset(5))
 }
 
@@ -26,7 +40,8 @@ func TestAsync(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		go func() {
 			for {
-				d := todo.Next()
+				d, err := todo.Next()
+				assert.NoError(t, err)
 				log.Println(d)
 				if d == -1 {
 					break

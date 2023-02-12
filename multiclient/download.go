@@ -40,11 +40,15 @@ func (d *Download) getAll() error {
 		go func(r *http.Request) {
 			name := r.URL.Hostname()
 			for {
-				b := todo.Next()
+				b, err := todo.Next()
+				if err != nil {
+					oops <- err
+					return
+				}
 				if b == -1 {
 					break
 				}
-				err := d.getOne(b*d.biteSize, name, r)
+				err = d.getOne(b*d.biteSize, name, r)
 				if err != nil {
 					if err != io.EOF {
 						// the fetch has failed, lets retry with another worker
