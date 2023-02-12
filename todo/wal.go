@@ -16,33 +16,14 @@ type Wal struct {
 	size int64
 }
 
-func CreateWal(file *os.File, size int64) (*Wal, error) {
-	err := binary.Write(file, binary.LittleEndian, size)
-	if err != nil {
-		return nil, err
-	}
-	err = file.Sync()
-	if err != nil {
-		return nil, err
-	}
-	return &Wal{
-		file: file,
-		size: size,
-	}, nil
-}
-
-func ReadWal(file *os.File) (*Todo, error) {
-	var size int64
-	err := binary.Read(file, binary.LittleEndian, &size)
-	if err != nil {
-		return nil, err
-	}
+func ReadFromWal(file *os.File, size int64) (*Todo, error) {
 	todo := New(size)
 	todo.wal = &Wal{
 		file: file,
 		size: size,
 	}
 	var line Line
+	var err error
 	for {
 		err = binary.Read(file, binary.LittleEndian, &line)
 		if err != nil {

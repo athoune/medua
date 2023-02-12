@@ -2,7 +2,6 @@ package todo
 
 import (
 	"errors"
-	"os"
 	"sync"
 )
 
@@ -20,16 +19,6 @@ func New(size int64) *Todo {
 		cursor: 0,
 		size:   size,
 	}
-}
-
-func NewWithWal(file *os.File, size int64) (*Todo, error) {
-	todo := New(size)
-	wal, err := CreateWal(file, size)
-	if err != nil {
-		return nil, err
-	}
-	todo.wal = wal
-	return todo, nil
 }
 
 func (t *Todo) Reset(poz int64) error {

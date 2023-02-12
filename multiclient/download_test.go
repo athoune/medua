@@ -56,7 +56,7 @@ func TestDownload(t *testing.T) {
 	testPath := filepath.Join(dir, "out")
 	out, err := os.OpenFile(testPath, os.O_WRONLY+os.O_CREATE, 0644)
 	assert.NoError(t, err)
-	err = client.Download(out, reqs...)
+	err = client.Download(out, nil, reqs...)
 	assert.NoError(t, err)
 	err = out.Close()
 	assert.NoError(t, err)

@@ -15,9 +15,9 @@ func TestWal(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // clean up
-	o, err := os.OpenFile(filepath.Join(dir, "demo.wal"), os.O_CREATE+os.O_WRONLY, 0600)
+	o, err := os.OpenFile(filepath.Join(dir, "demo.wal"), os.O_CREATE+os.O_RDWR, 0600)
 	assert.NoError(t, err)
-	t1, err := NewWithWal(o, 32)
+	t1, err := ReadFromWal(o, 32)
 	assert.NoError(t, err)
 	n := t1.Next()
 	assert.Equal(t, int64(0), n)
@@ -33,7 +33,7 @@ func TestWal(t *testing.T) {
 	assert.NoError(t, err)
 	o2, err := os.OpenFile(filepath.Join(dir, "demo.wal"), os.O_RDWR, 0600)
 	assert.NoError(t, err)
-	t2, err := ReadWal(o2)
+	t2, err := ReadFromWal(o2, 32)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(32), t2.size)
 	n = t2.Next()

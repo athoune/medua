@@ -25,13 +25,18 @@ func main() {
 			URL:    uu,
 		}
 	}
+	wal, err := os.OpenFile(os.Args[1]+".wal", os.O_CREATE+os.O_RDWR, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
 	mc := multiclient.New(1024 * 1024) // 1Mo
 	mc.Timeout = 15 * time.Second
+
 	tmp, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = mc.Download(tmp, urls...)
+	err = mc.Download(tmp, wal, urls...)
 	if err != nil {
 		log.Fatal(err)
 	}

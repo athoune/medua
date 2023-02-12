@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ type Download struct {
 	clients       ClientPool
 	biteSize      int64
 	written       int
+	wal           *os.File
 }
 
 func (d *Download) clean() {
@@ -33,7 +35,16 @@ func (d *Download) getAll() error {
 	if d.contentLength%d.biteSize > 0 {
 		bites += 1
 	}
-	todo := _todo.New(bites)
+	var todo *_todo.Todo
+	if d.wal == nil {
+		todo = _todo.New(bites)
+	} else {
+		var err error
+		todo, err = _todo.ReadFromWal(d.wal, bites)
+		if err != nil {
+			return err
+		}
+	}
 
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {

@@ -1,6 +1,9 @@
 #!/bin/bash
 
-rm -f debian.iso
+if [ ! -e debian.iso.wal ]
+then
+	rm -f debian.iso
+fi
 ./bin/medusa-get debian.iso \
     http://debian.koyanet.lv/debian-cd/11.6.0/amd64/iso-cd/debian-11.6.0-amd64-netinst.iso \
     http://debian.anexia.at/debian-cd/11.6.0/amd64/iso-cd/debian-11.6.0-amd64-netinst.iso \
