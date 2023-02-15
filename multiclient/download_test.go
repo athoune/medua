@@ -29,8 +29,11 @@ func TestDownload(t *testing.T) {
 	noise := make([]byte, 5*1024)
 	for i := 0; i < 1024; i++ {
 		n, err := o.Read(noise)
+		if err != nil {
+			panic(err)
+		}
 		assert.Equal(t, 5*1024, n)
-		_, err = f.Write(noise)
+		_, err = f.Write(noise[:n])
 		if err != nil {
 			panic(err)
 		}

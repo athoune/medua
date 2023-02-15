@@ -19,7 +19,7 @@ func (d *Download) head() error {
 		req.Method = http.MethodHead
 		go func(r *http.Request) {
 			ts := time.Now()
-			resp, err := d.client.Do(r)
+			resp, err := d.clients[0].Do(r)
 			if err != nil || resp.StatusCode != http.StatusOK {
 				if resp != nil {
 					log.Println(r.URL, resp.Status, err)

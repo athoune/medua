@@ -15,19 +15,22 @@ import (
 type Multiclient struct {
 	biteSize int64
 	lock     *sync.Mutex
-	client   *http.Client
+	clients  []*http.Client
 	Timeout  time.Duration
 }
 
 func New(biteSize int64) *Multiclient {
-
+	clients := make([]*http.Client, 3)
+	for i := 0; i < 3; i++ {
+		clients[i] = &http.Client{
+			Transport: http.DefaultTransport,
+		}
+	}
 	return &Multiclient{
 		biteSize: biteSize,
 		lock:     &sync.Mutex{},
-		client: &http.Client{
-			Transport: http.DefaultTransport,
-		},
-		Timeout: 30 * time.Second,
+		clients:  clients,
+		Timeout:  30 * time.Second,
 	}
 
 }
@@ -45,7 +48,7 @@ func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*ht
 	}
 	download := &Download{
 		reqs:     reqs,
-		client:   mc.client,
+		clients:  mc.clients,
 		biteSize: mc.biteSize,
 		cake:     NewCake(writer),
 		wal:      wal,

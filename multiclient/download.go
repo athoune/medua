@@ -19,7 +19,7 @@ type Download struct {
 	reqs          []*http.Request
 	contentLength int64
 	lock          *sync.Mutex
-	client        *http.Client
+	clients       []*http.Client
 	biteSize      int64
 	written       int
 	wal           *os.File
@@ -32,6 +32,7 @@ func (d *Download) clean() {
 }
 
 func (d *Download) getAll() error {
+	multi := 3
 	bites := d.contentLength / d.biteSize
 	if d.contentLength%d.biteSize > 0 {
 		bites += 1
@@ -49,8 +50,8 @@ func (d *Download) getAll() error {
 
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {
-		for i := 0; i < 2; i++ {
-			go func(req *http.Request) {
+		for i := 0; i < multi; i++ {
+			go func(req *http.Request, i int) {
 				name := req.URL.Hostname()
 				for {
 					b := todo.Next()
@@ -58,7 +59,7 @@ func (d *Download) getAll() error {
 						oops <- io.EOF
 						return
 					}
-					err := d.getOne(b*d.biteSize, name, req)
+					err := d.getOne(b*d.biteSize, i, name, req)
 					if err != nil {
 						// the fetch has failed, lets retry with another worker
 						todo.Reset(b)
@@ -74,11 +75,11 @@ func (d *Download) getAll() error {
 					}
 					oops <- nil // one bite done
 				}
-			}(req.Clone(context.TODO()))
+			}(req.Clone(context.TODO()), i)
 		}
 	}
 	var err error
-	workers := len(d.reqs)
+	workers := len(d.reqs) * multi
 	for err = range oops {
 		if err != nil {
 			workers -= 1
@@ -99,7 +100,7 @@ func (d *Download) getAll() error {
 	return nil
 }
 
-func (d *Download) getOne(offset int64, name string, r *http.Request) error {
+func (d *Download) getOne(offset int64, i int, name string, r *http.Request) error {
 	ts := time.Now()
 	end := offset + d.biteSize - 1
 	if end >= d.contentLength {
@@ -110,7 +111,7 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	}
 	r.Header.Set("user-agent", "Medusa")
 	r.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
-	resp, err := d.client.Do(r)
+	resp, err := d.clients[i].Do(r)
 	if err != nil {
 		return err
 	}
