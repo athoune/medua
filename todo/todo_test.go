@@ -23,6 +23,8 @@ func TestTodo(t *testing.T) {
 	assert.Equal(t, int64(4), n)
 	n = todo.Next()
 	assert.Equal(t, int64(-1), n)
+	n = todo.Next()
+	assert.Equal(t, int64(-1), n)
 	assert.Error(t, todo.Reset(5))
 }
 

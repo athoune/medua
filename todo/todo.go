@@ -43,6 +43,9 @@ func (t *Todo) Reset(poz int64) error {
 func (t *Todo) Next() int64 {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+	if t.cursor > t.size {
+		return -1
+	}
 	for i := t.cursor; i < t.size; i++ {
 		if !t.doing[i] {
 			t.doing[i] = true
