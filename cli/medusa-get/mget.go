@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/athoune/medusa/multiclient"
+	"github.com/cheggaaa/pb"
 )
 
 func main() {
@@ -38,8 +40,41 @@ func main() {
 		log.Fatal(err)
 	}
 	defer dest.Close()
-	err = mc.Download(dest, wal, urls...)
+
+	bars := make([]*pb.ProgressBar, 0)
+	pbs := make(map[string]*pb.ProgressBar)
+	maxSize := 0
+	onHead := func(head multiclient.Head) {
+		if len(head.Domain) > maxSize {
+			maxSize = len(head.Domain)
+		}
+		_, ok := pbs[head.Domain]
+		if !ok {
+			bar := pb.New(int(head.Size) / (1024 * 1024))
+			bar.ShowPercent = false
+			bars = append(bars, bar)
+			pbs[head.Domain] = bar
+		}
+	}
+	var pool *pb.Pool
+	onHeadEnd := func() {
+		namePadding := fmt.Sprintf("%%-%ds", maxSize)
+		for name, bar := range pbs {
+			pbs[name] = bar.Prefix(fmt.Sprintf(namePadding, name))
+		}
+		var err error
+		pool, err = pb.StartPool(bars...)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	onChunk := func(chunk multiclient.Chunk) {
+		pbs[chunk.Name].Increment()
+		pbs[chunk.Name].Finish()
+	}
+	err = mc.Download(dest, wal, onHead, onHeadEnd, onChunk, urls...)
 	if err != nil {
 		log.Fatal(err)
 	}
+	pool.Stop()
 }

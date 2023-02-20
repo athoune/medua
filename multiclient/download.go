@@ -14,6 +14,17 @@ import (
 	_todo "github.com/athoune/medusa/todo"
 )
 
+type Chunk struct {
+	Name  string
+	Count int
+}
+
+type Head struct {
+	Domain  string
+	Latency time.Duration
+	Size    int64
+}
+
 type Download struct {
 	cake          *Cake
 	reqs          []*http.Request
@@ -23,6 +34,9 @@ type Download struct {
 	biteSize      int64
 	written       int
 	wal           *os.File
+	onHead        func(Head)
+	onHeadEnd     func()
+	onChunk       func(Chunk)
 }
 
 func (d *Download) clean() {
@@ -51,8 +65,9 @@ func (d *Download) getAll() error {
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {
 		for i := 0; i < multi; i++ {
-			go func(req *http.Request) {
-				name := req.URL.Hostname()
+			go func(req *http.Request, i int) {
+				name := fmt.Sprintf("%s#%d", req.URL.Hostname(), i)
+				cpt := 0
 				for {
 					b := todo.Next()
 					if b == -1 {
@@ -73,9 +88,16 @@ func (d *Download) getAll() error {
 						oops <- err
 						return
 					}
+					cpt++
+					if d.onChunk != nil {
+						d.onChunk(Chunk{
+							Name:  name,
+							Count: cpt * int(d.biteSize),
+						})
+					}
 					oops <- nil // one bite done
 				}
-			}(req.Clone(context.TODO()))
+			}(req.Clone(context.TODO()), i)
 		}
 	}
 	var err error
@@ -101,7 +123,7 @@ func (d *Download) getAll() error {
 }
 
 func (d *Download) getOne(offset int64, name string, r *http.Request) error {
-	ts := time.Now()
+	//ts := time.Now()
 	end := offset + d.biteSize - 1
 	if end >= d.contentLength {
 		end = d.contentLength - 1
@@ -127,6 +149,6 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 			resp.Header.Get("content-length"), err)
 		return err
 	}
-	log.Printf("%s %d-%d %v\n", r.URL.Host, offset, end, time.Since(ts))
+	//log.Printf("%s %d-%d %v\n", r.URL.Host, offset, end, time.Since(ts))
 	return nil
 }

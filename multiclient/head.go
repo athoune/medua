@@ -71,8 +71,17 @@ func (d *Download) head() error {
 			d.lock.Lock()
 			usable = append(usable, r)
 			d.lock.Unlock()
+
+			if d.onHead != nil {
+				for i := 0; i < 3; i++ {
+					d.onHead(Head{
+						Domain:  fmt.Sprintf("%s#%d", r.URL.Hostname(), i),
+						Latency: time.Since(ts),
+						Size:    d.contentLength,
+					})
+				}
+			}
 			events <- nil
-			log.Println("HEAD latency", resp.Proto, r.URL.Host, time.Since(ts))
 		}(req)
 	}
 	var err error
@@ -81,6 +90,9 @@ func (d *Download) head() error {
 		if err != nil {
 			return err
 		}
+	}
+	if d.onHeadEnd != nil {
+		d.onHeadEnd()
 	}
 	d.reqs = usable
 	return nil
