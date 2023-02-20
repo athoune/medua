@@ -50,8 +50,9 @@ func main() {
 		}
 		_, ok := pbs[head.Domain]
 		if !ok {
-			bar := pb.New(int(head.Size) / (1024 * 1024))
+			bar := pb.New(int(head.Size))
 			bar.ShowPercent = false
+			bar.ShowSpeed = true
 			bars = append(bars, bar)
 			pbs[head.Domain] = bar
 		}
@@ -69,8 +70,7 @@ func main() {
 		}
 	}
 	onChunk := func(chunk multiclient.Chunk) {
-		pbs[chunk.Name].Increment()
-		pbs[chunk.Name].Finish()
+		pbs[chunk.Name].Set(chunk.Count).Finish()
 	}
 	err = mc.Download(dest, wal, onHead, onHeadEnd, onChunk, urls...)
 	if err != nil {
