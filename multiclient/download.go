@@ -49,6 +49,18 @@ func (d *Download) clean() {
 }
 
 func (d *Download) Fetch() error {
+	err := d.preflight()
+	if err != nil {
+		return err
+	}
+	err = d.head()
+	if err != nil {
+		return err
+	}
+	return d.getAll()
+}
+
+func (d *Download) preflight() error {
 	for _, req := range d.reqs {
 		if req.Method != http.MethodGet {
 			return fmt.Errorf("only GET method is handled, not %s", req.Method)
@@ -59,11 +71,7 @@ func (d *Download) Fetch() error {
 		}
 		log.Println(req.URL.Host, ips)
 	}
-	err := d.head()
-	if err != nil {
-		return err
-	}
-	return d.getAll()
+	return nil
 }
 
 func (d *Download) getAll() error {
