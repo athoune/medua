@@ -27,6 +27,9 @@ func (c *Cake) Bite(offset int64, body io.Reader, size int64) error {
 	if err != nil {
 		return err
 	}
+	if int64(len(buff)) != size {
+		return fmt.Errorf("uncomplete read %d of %d", len(buff), size)
+	}
 	// read can be slow and async, lock only the write step
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -39,7 +42,7 @@ func (c *Cake) Bite(offset int64, body io.Reader, size int64) error {
 		return err
 	}
 	if int64(n) != size {
-		return fmt.Errorf("Uncomplete write %d of %d", n, size)
+		return fmt.Errorf("uncomplete write %d of %d", n, size)
 	}
 	syncer, ok := c.file.(*os.File) // if it's a File, lets sync
 	if ok {
