@@ -1,4 +1,4 @@
-package multiclient
+package cake
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ type Cake struct {
 	file io.WriteSeeker
 }
 
-func NewCake(file io.WriteSeeker) *Cake {
+func New(file io.WriteSeeker) *Cake {
 	return &Cake{
 		lock: &sync.Mutex{},
 		file: file,

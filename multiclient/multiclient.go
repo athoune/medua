@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/athoune/medusa/cake"
 )
 
 type Multiclient struct {
@@ -46,7 +48,7 @@ func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, onHead func
 		reqs:      reqs,
 		client:    mc.client,
 		biteSize:  mc.biteSize,
-		cake:      NewCake(writer),
+		cake:      cake.New(writer),
 		wal:       wal,
 		onHead:    onHead,
 		onHeadEnd: onHeadEnd,

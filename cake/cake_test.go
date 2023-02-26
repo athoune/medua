@@ -1,4 +1,4 @@
-package multiclient
+package cake
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ func TestCake(t *testing.T) {
 	f, err := os.OpenFile(file, os.O_CREATE+os.O_RDWR, 0644)
 	assert.NoError(t, err)
 
-	cake := NewCake(f)
+	cake := New(f)
 	err = cake.Bite(3, bytes.NewBuffer([]byte("lo")), 2)
 	assert.NoError(t, err)
 	err = cake.Bite(0, bytes.NewBuffer([]byte("hel")), 3)

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/athoune/medusa/cake"
 	_todo "github.com/athoune/medusa/todo"
 )
 
@@ -26,7 +27,7 @@ type Head struct {
 }
 
 type Download struct {
-	cake          *Cake
+	cake          *cake.Cake
 	reqs          []*http.Request
 	contentLength int64
 	lock          *sync.Mutex
@@ -139,7 +140,7 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 		log.Println("Can't fetch ", resp.Status, r.Header)
-		return fmt.Errorf("Bad status %s", resp.Status)
+		return fmt.Errorf("bad status %s", resp.Status)
 	}
 	defer resp.Body.Close()
 	err = d.cake.Bite(offset, resp.Body, end-offset+1)
