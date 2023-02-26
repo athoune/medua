@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,15 +37,33 @@ type Download struct {
 	biteSize      int64
 	written       int
 	wal           *os.File
-	onHead        func(Head)
-	onHeadEnd     func()
-	onChunk       func(Chunk)
+	OnHead        func(Head)
+	OnHeadEnd     func()
+	OnChunk       func(Chunk)
 }
 
 func (d *Download) clean() {
 	d.contentLength = -1
 	d.lock = &sync.Mutex{}
 	d.written = 0
+}
+
+func (d *Download) Fetch() error {
+	for _, req := range d.reqs {
+		if req.Method != http.MethodGet {
+			return fmt.Errorf("only GET method is handled, not %s", req.Method)
+		}
+		ips, err := net.LookupIP(strings.Split(req.URL.Host, ":")[0])
+		if err != nil {
+			return err
+		}
+		log.Println(req.URL.Host, ips)
+	}
+	err := d.head()
+	if err != nil {
+		return err
+	}
+	return d.getAll()
 }
 
 func (d *Download) getAll() error {
@@ -90,8 +110,8 @@ func (d *Download) getAll() error {
 						return
 					}
 					cpt++
-					if d.onChunk != nil {
-						d.onChunk(Chunk{
+					if d.OnChunk != nil {
+						d.OnChunk(Chunk{
 							Name:  name,
 							Count: cpt * int(d.biteSize),
 						})

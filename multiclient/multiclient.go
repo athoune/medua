@@ -1,13 +1,9 @@
 package multiclient
 
 import (
-	"fmt"
 	"io"
-	"log"
-	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -33,37 +29,12 @@ func New(biteSize int64) *Multiclient {
 
 }
 
-func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, onHead func(Head), onHeadEnd func(), onChunk func(Chunk), reqs ...*http.Request) error {
-	for _, req := range reqs {
-		if req.Method != http.MethodGet {
-			return fmt.Errorf("Only GET method is handled, not %s", req.Method)
-		}
-		ips, err := net.LookupIP(strings.Split(req.URL.Host, ":")[0])
-		if err != nil {
-			return err
-		}
-		log.Println(req.URL.Host, ips)
+func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*http.Request) *Download {
+	return &Download{
+		reqs:     reqs,
+		client:   mc.client,
+		biteSize: mc.biteSize,
+		cake:     cake.New(writer),
+		wal:      wal,
 	}
-	download := &Download{
-		reqs:      reqs,
-		client:    mc.client,
-		biteSize:  mc.biteSize,
-		cake:      cake.New(writer),
-		wal:       wal,
-		onHead:    onHead,
-		onHeadEnd: onHeadEnd,
-		onChunk:   onChunk,
-	}
-
-	err := download.head()
-	if err != nil {
-		return err
-	}
-
-	err = download.getAll()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

@@ -72,9 +72,9 @@ func (d *Download) head() error {
 			usable = append(usable, r)
 			d.lock.Unlock()
 
-			if d.onHead != nil {
+			if d.OnHead != nil {
 				for i := 0; i < 3; i++ {
-					d.onHead(Head{
+					d.OnHead(Head{
 						Domain:  fmt.Sprintf("%s#%d", r.URL.Hostname(), i),
 						Latency: time.Since(ts),
 						Size:    d.contentLength,
@@ -91,8 +91,8 @@ func (d *Download) head() error {
 			return err
 		}
 	}
-	if d.onHeadEnd != nil {
-		d.onHeadEnd()
+	if d.OnHeadEnd != nil {
+		d.OnHeadEnd()
 	}
 	d.reqs = usable
 	return nil

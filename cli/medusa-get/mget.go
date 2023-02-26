@@ -44,7 +44,9 @@ func main() {
 	bars := make([]*pb.ProgressBar, 0)
 	pbs := make(map[string]*pb.ProgressBar)
 	maxSize := 0
-	onHead := func(head multiclient.Head) {
+	var pool *pb.Pool
+	d := mc.Download(dest, wal, urls...)
+	d.OnHead = func(head multiclient.Head) {
 		if len(head.Domain) > maxSize {
 			maxSize = len(head.Domain)
 		}
@@ -57,8 +59,10 @@ func main() {
 			pbs[head.Domain] = bar
 		}
 	}
-	var pool *pb.Pool
-	onHeadEnd := func() {
+	d.OnChunk = func(chunk multiclient.Chunk) {
+		pbs[chunk.Name].Set(chunk.Count).Finish()
+	}
+	d.OnHeadEnd = func() {
 		namePadding := fmt.Sprintf("%%-%ds", maxSize)
 		for name, bar := range pbs {
 			pbs[name] = bar.Prefix(fmt.Sprintf(namePadding, name))
@@ -69,10 +73,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	onChunk := func(chunk multiclient.Chunk) {
-		pbs[chunk.Name].Set(chunk.Count).Finish()
-	}
-	err = mc.Download(dest, wal, onHead, onHeadEnd, onChunk, urls...)
+	err = d.Fetch()
 	if err != nil {
 		log.Fatal(err)
 	}
