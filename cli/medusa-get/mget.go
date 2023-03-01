@@ -50,13 +50,14 @@ func main() {
 		if len(head.Domain) > maxSize {
 			maxSize = len(head.Domain)
 		}
-		_, ok := pbs[head.Domain]
+		k := head.Domain
+		_, ok := pbs[k]
 		if !ok {
 			bar := pb.New(int(head.Size))
 			bar.ShowPercent = false
 			bar.ShowSpeed = true
 			bars = append(bars, bar)
-			pbs[head.Domain] = bar
+			pbs[k] = bar
 		}
 	}
 	d.OnChunk = func(chunk multiclient.Chunk) {
@@ -75,7 +76,7 @@ func main() {
 	}
 	err = d.Fetch()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("/!\\ ", err)
 	}
 	pool.Stop()
 }

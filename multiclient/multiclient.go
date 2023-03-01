@@ -17,16 +17,25 @@ type Multiclient struct {
 	Timeout  time.Duration
 }
 
+var MyDefaultTransport http.RoundTripper = &http.Transport{
+	Proxy:                 http.ProxyFromEnvironment,
+	DialContext:           DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
+
 func New(biteSize int64) *Multiclient {
 	return &Multiclient{
 		biteSize: biteSize,
 		lock:     &sync.Mutex{},
 		client: &http.Client{
-			Transport: http.DefaultTransport,
+			Transport: MyDefaultTransport,
 		},
 		Timeout: 30 * time.Second,
 	}
-
 }
 
 func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*http.Request) *Download {

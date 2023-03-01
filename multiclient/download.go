@@ -53,6 +53,7 @@ func (d *Download) Fetch() error {
 	if err != nil {
 		return err
 	}
+	log.Println("Head")
 	err = d.head()
 	if err != nil {
 		return err
@@ -61,21 +62,31 @@ func (d *Download) Fetch() error {
 }
 
 func (d *Download) preflight() error {
+	goods := make([]*http.Request, 0)
 	for _, req := range d.reqs {
 		if req.Method != http.MethodGet {
 			return fmt.Errorf("only GET method is handled, not %s", req.Method)
 		}
 		ips, err := net.LookupIP(strings.Split(req.URL.Host, ":")[0])
 		if err != nil {
-			return err
+			log.Println("Can't resolve ", req.URL.Host)
+		} else {
+			for _, ip := range ips {
+				if ip.To4() != nil {
+					ctx := context.WithValue(context.TODO(), "ip", ip)
+					ctx = context.WithValue(ctx, "host", req.URL.Host)
+					goods = append(goods, req.WithContext(ctx))
+					log.Println(req.URL.Host, ip)
+				}
+			}
 		}
-		log.Println(req.URL.Host, ips)
 	}
+	d.reqs = goods
 	return nil
 }
 
 func (d *Download) getAll() error {
-	multi := 3
+	multi := 1
 	bites := d.contentLength / d.biteSize
 	if d.contentLength%d.biteSize > 0 {
 		bites += 1

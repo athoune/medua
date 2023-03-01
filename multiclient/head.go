@@ -1,6 +1,7 @@
 package multiclient
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,6 +19,9 @@ func (d *Download) head() error {
 	for _, req := range d.reqs {
 		req.Method = http.MethodHead
 		go func(r *http.Request) {
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			r = r.WithContext(ctx)
 			ts := time.Now()
 			resp, err := d.client.Do(r)
 			if err != nil || resp.StatusCode != http.StatusOK {
@@ -35,7 +39,7 @@ func (d *Download) head() error {
 			}
 			cl, err := strconv.Atoi(resp.Header.Get("content-length"))
 			if err != nil {
-				events <- fmt.Errorf("Can't parse content-length %v", err)
+				events <- fmt.Errorf("can't parse content-length %v", err)
 				return
 			}
 			lock.Lock()
@@ -45,7 +49,7 @@ func (d *Download) head() error {
 			} else {
 				defer lock.Unlock()
 				if d.contentLength != int64(cl) {
-					events <- fmt.Errorf("Different size %d %d", d.contentLength, cl)
+					events <- fmt.Errorf("different size %d %d", d.contentLength, cl)
 					return
 				}
 			}
@@ -53,7 +57,7 @@ func (d *Download) head() error {
 			if ra != "" {
 				rav, err := strconv.Atoi(ra)
 				if err != nil {
-					events <- fmt.Errorf("Can't read range %v", err)
+					events <- fmt.Errorf("can't read range %v", err)
 					return
 				}
 				if crange == -1 {
@@ -85,8 +89,7 @@ func (d *Download) head() error {
 		}(req)
 	}
 	var err error
-	for i := 0; i < len(d.reqs); i++ {
-		err = <-events
+	for err = range events {
 		if err != nil {
 			return err
 		}
