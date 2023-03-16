@@ -18,8 +18,8 @@ import (
 )
 
 type Chunk struct {
-	Name  string
-	Count int
+	Name string
+	Size int
 }
 
 type Head struct {
@@ -120,8 +120,8 @@ func (d *Download) getAll() error {
 					cpt++
 					if d.OnChunk != nil {
 						d.OnChunk(Chunk{
-							Name:  name,
-							Count: cpt * int(d.biteSize),
+							Name: name,
+							Size: cpt * int(d.biteSize),
 						})
 					}
 					oops <- nil // one bite done

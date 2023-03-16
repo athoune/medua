@@ -60,7 +60,7 @@ func main() {
 		}
 	}
 	d.OnChunk = func(chunk multiclient.Chunk) {
-		pbs[chunk.Name].Set(chunk.Count).Finish()
+		pbs[chunk.Name].Set(chunk.Size).Finish()
 	}
 	d.OnHeadEnd = func() {
 		namePadding := fmt.Sprintf("%%-%ds", maxSize)
