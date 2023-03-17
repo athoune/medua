@@ -31,7 +31,7 @@ type Head struct {
 type Download struct {
 	cake          *cake.Cake
 	reqs          []*http.Request
-	contentLength int64
+	ContentLength int64
 	lock          *sync.Mutex
 	client        *http.Client
 	biteSize      int64
@@ -43,7 +43,7 @@ type Download struct {
 }
 
 func (d *Download) clean() {
-	d.contentLength = -1
+	d.ContentLength = -1
 	d.lock = &sync.Mutex{}
 	d.written = 0
 }
@@ -76,8 +76,8 @@ func (d *Download) preflight() error {
 
 func (d *Download) getAll() error {
 	multi := 3
-	bites := d.contentLength / d.biteSize
-	if d.contentLength%d.biteSize > 0 {
+	bites := d.ContentLength / d.biteSize
+	if d.ContentLength%d.biteSize > 0 {
 		bites += 1
 	}
 	var todo *_todo.Todo
@@ -154,8 +154,8 @@ func (d *Download) getAll() error {
 func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	//ts := time.Now()
 	end := offset + d.biteSize - 1
-	if end >= d.contentLength {
-		end = d.contentLength - 1
+	if end >= d.ContentLength {
+		end = d.ContentLength - 1
 	}
 	if r.Header == nil {
 		r.Header = make(http.Header)

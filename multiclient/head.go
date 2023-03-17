@@ -39,13 +39,13 @@ func (d *Download) head() error {
 				return
 			}
 			lock.Lock()
-			if d.contentLength == -1 {
-				d.contentLength = int64(cl)
+			if d.ContentLength == -1 {
+				d.ContentLength = int64(cl)
 				lock.Unlock()
 			} else {
 				defer lock.Unlock()
-				if d.contentLength != int64(cl) {
-					events <- fmt.Errorf("Different size %d %d", d.contentLength, cl)
+				if d.ContentLength != int64(cl) {
+					events <- fmt.Errorf("Different size %d %d", d.ContentLength, cl)
 					return
 				}
 			}
@@ -77,7 +77,7 @@ func (d *Download) head() error {
 					d.OnHead(Head{
 						Domain:  fmt.Sprintf("%s#%d", r.URL.Hostname(), i),
 						Latency: time.Since(ts),
-						Size:    d.contentLength,
+						Size:    d.ContentLength,
 					})
 				}
 			}

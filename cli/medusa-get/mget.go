@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -9,7 +8,8 @@ import (
 	"time"
 
 	"github.com/athoune/medusa/multiclient"
-	"github.com/cheggaaa/pb"
+	"github.com/athoune/medusa/widgets"
+	"github.com/rivo/tview"
 )
 
 func main() {
@@ -41,41 +41,55 @@ func main() {
 	}
 	defer dest.Close()
 
-	bars := make([]*pb.ProgressBar, 0)
-	pbs := make(map[string]*pb.ProgressBar)
-	maxSize := 0
-	var pool *pb.Pool
+	grid := tview.NewFlex()
+	grid.SetTitle("Medusa")
+
+	var tiles *widgets.Tiles
+	app := tview.NewApplication().SetRoot(grid, true).SetFocus(grid)
+	head := tview.NewTextView().SetChangedFunc(func() {
+		app.Draw()
+	})
+	head.SetBorder(true)
+	head.Write([]byte("Medusa rulez\n"))
+	grid.AddItem(head, 5, 1, false).SetDirection(tview.FlexRow)
+
+	log.SetOutput(head)
 	d := mc.Download(dest, wal, urls...)
-	d.OnHead = func(head multiclient.Head) {
-		if len(head.Domain) > maxSize {
-			maxSize = len(head.Domain)
-		}
-		_, ok := pbs[head.Domain]
-		if !ok {
-			bar := pb.New(int(head.Size))
-			bar.ShowPercent = false
-			bar.ShowSpeed = true
-			bars = append(bars, bar)
-			pbs[head.Domain] = bar
-		}
-	}
-	d.OnChunk = func(chunk multiclient.Chunk) {
-		pbs[chunk.Name].Set(chunk.Size).Finish()
+	downloaders := make([]string, 0)
+	d.OnHead = func(_head multiclient.Head) {
+		downloaders = append(downloaders, _head.Domain)
+		app.QueueUpdateDraw(func() {
+			head.SetLabel(_head.Domain)
+		})
 	}
 	d.OnHeadEnd = func() {
-		namePadding := fmt.Sprintf("%%-%ds", maxSize)
-		for name, bar := range pbs {
-			pbs[name] = bar.Prefix(fmt.Sprintf(namePadding, name))
-		}
-		var err error
-		pool, err = pb.StartPool(bars...)
+		app.QueueUpdateDraw(func() {
+			// body.Clear()
+			log.SetOutput(head)
+			tiles = widgets.NewTiles(int(d.ContentLength))
+			tiles.AddHosts(downloaders...)
+			tiles.SetBorder(true)
+			grid.AddItem(tiles, len(downloaders)+2, 1, true).SetDirection(tview.FlexRow)
+			head.Clear()
+		})
+	}
+	d.OnChunk = func(chunk multiclient.Chunk) {
+		app.QueueUpdateDraw(func() {
+			tiles.AckChunk(chunk.Name)
+			app.Sync()
+		})
+	}
+
+	go func() {
+		err = d.Fetch()
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-	err = d.Fetch()
+		app.Stop()
+	}()
+
+	err = app.Run()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	pool.Stop()
 }
