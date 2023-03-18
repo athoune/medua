@@ -49,7 +49,7 @@ func (d *Download) clean() {
 }
 
 func (d *Download) Written() int64 {
-	return int64(d.written) * d.biteSize
+	return int64(d.written)
 }
 
 func (d *Download) Fetch() error {
