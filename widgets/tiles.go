@@ -53,8 +53,9 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var start int
-	if t.poz > (width - 2 - t.maxSize) {
-		start = t.poz - width - 2 - t.maxSize
+	barWidth := width - 2 - t.maxSize
+	if t.poz > barWidth {
+		start = t.poz - barWidth
 	} else {
 		start = 0
 	}
@@ -76,7 +77,11 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 				if j == t.poz-1 {
 					r = '📦' // tview.BlockLightShade
 				} else {
-					r = tview.BlockFullBlock
+					if start != 0 && j-start < 3 {
+						r = tview.BlockLightShade
+					} else {
+						r = tview.BlockFullBlock
+					}
 				}
 			} else {
 				r = ' '

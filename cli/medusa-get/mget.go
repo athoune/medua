@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -52,8 +53,13 @@ func main() {
 	head.SetBorder(true)
 	head.Write([]byte("Medusa rulez\n"))
 	grid.AddItem(head, 5, 1, false).SetDirection(tview.FlexRow)
-
 	log.SetOutput(head)
+
+	footer := tview.NewTextView().SetChangedFunc(func() {
+		app.Draw()
+	})
+	footer.SetBorder(true)
+
 	d := mc.Download(dest, wal, urls...)
 	downloaders := make([]string, 0)
 	d.OnHead = func(_head multiclient.Head) {
@@ -62,6 +68,7 @@ func main() {
 			head.SetLabel(_head.Domain)
 		})
 	}
+	var start time.Time
 	d.OnHeadEnd = func() {
 		app.QueueUpdateDraw(func() {
 			// body.Clear()
@@ -71,11 +78,17 @@ func main() {
 			tiles.SetBorder(true)
 			grid.AddItem(tiles, len(downloaders)+2, 1, true).SetDirection(tview.FlexRow)
 			head.Clear()
+			grid.AddItem(footer, 3, 1, false).SetDirection(tview.FlexRow)
 		})
+		start = time.Now()
 	}
 	d.OnChunk = func(chunk multiclient.Chunk) {
 		app.QueueUpdateDraw(func() {
 			tiles.AckChunk(chunk.Name)
+			dbt := float64(chunk.Size) / float64(time.Since(start))
+			ratio := 100 * float64(chunk.Size) / float64(d.ContentLength)
+			footer.Clear()
+			fmt.Fprintf(footer, "%d%% %f B/s\n", int64(ratio), dbt)
 			app.Sync()
 		})
 	}

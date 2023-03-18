@@ -19,7 +19,7 @@ import (
 
 type Chunk struct {
 	Name string
-	Size int
+	Size int64
 }
 
 type Head struct {
@@ -35,7 +35,7 @@ type Download struct {
 	lock          *sync.Mutex
 	client        *http.Client
 	biteSize      int64
-	written       int
+	written       int64
 	wal           *os.File
 	OnHead        func(Head)
 	OnHeadEnd     func()
@@ -46,6 +46,10 @@ func (d *Download) clean() {
 	d.ContentLength = -1
 	d.lock = &sync.Mutex{}
 	d.written = 0
+}
+
+func (d *Download) Written() int64 {
+	return int64(d.written) * d.biteSize
 }
 
 func (d *Download) Fetch() error {
@@ -118,10 +122,11 @@ func (d *Download) getAll() error {
 						return
 					}
 					cpt++
+					d.written += d.biteSize
 					if d.OnChunk != nil {
 						d.OnChunk(Chunk{
 							Name: name,
-							Size: cpt * int(d.biteSize),
+							Size: int64(cpt) * d.biteSize,
 						})
 					}
 					oops <- nil // one bite done
