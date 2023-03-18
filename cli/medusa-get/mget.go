@@ -35,7 +35,7 @@ func main() {
 	}
 	defer wal.Close()
 	mc := multiclient.New(1024 * 1024) // 1Mo
-	mc.Timeout = 15 * time.Second
+	mc.Timeout = 5 * time.Second
 
 	dest, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
 	if err != nil {
