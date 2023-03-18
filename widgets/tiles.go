@@ -53,17 +53,17 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var start int
-	if t.poz+t.maxSize > (width - 2) {
+	if t.poz > (width - 2 - t.maxSize) {
 		start = t.poz - width - 2 - t.maxSize
 	} else {
 		start = 0
 	}
 	i := 0
 	var r rune
-	fullline := make([]rune, width)
+	fullline := make([]rune, width-x)
 	for _, k := range t.keys {
 		v := t.tiles[k]
-		for a := 0; a < width; a++ {
+		for a := 0; a < width-x; a++ {
 			if a < t.maxSize-1 {
 				fullline[a] = '.'
 			} else {
@@ -73,13 +73,21 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 		copy(fullline, []rune(k))
 		for j := start; j < t.poz; j++ {
 			if v[j] == 1 {
-				r = tview.BlockFullBlock
+				if j == t.poz-1 {
+					r = '📦' // tview.BlockLightShade
+				} else {
+					r = tview.BlockFullBlock
+				}
 			} else {
-				r = '.'
+				r = ' '
 			}
 			fullline[j-start+t.maxSize] = r
 		}
-		screen.SetContent(x, y+i, fullline[0], fullline[1:], tcell.StyleDefault)
+		back := tcell.ColorBlack
+		if i%2 == 0 {
+			back = tcell.ColorDarkSlateGray
+		}
+		screen.SetContent(x, y+i, fullline[0], fullline[1:], tcell.StyleDefault.Background(back))
 		i++
 	}
 }
