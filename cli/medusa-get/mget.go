@@ -89,7 +89,7 @@ func main() {
 			dbt := float64(time.Second) * float64(d.Written()) / float64(time.Since(start))
 			ratio := 100 * float64(d.Written()) / float64(d.ContentLength)
 			footer.Clear()
-			fmt.Fprintf(footer, "%d%% %s/s\n", int64(ratio), units.HumanSize(dbt))
+			fmt.Fprintf(footer, "%02d%% %s/s\n", int64(ratio), units.HumanSize(dbt))
 			app.Sync()
 		})
 	}
@@ -106,5 +106,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(os.Stderr, "Download in %v", time.Since(start))
+	fmt.Fprintf(os.Stderr, "Download in %v\n", time.Since(start))
 }
