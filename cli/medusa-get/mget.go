@@ -10,6 +10,7 @@ import (
 
 	"github.com/athoune/medusa/multiclient"
 	"github.com/athoune/medusa/widgets"
+	"github.com/docker/go-units"
 	"github.com/rivo/tview"
 )
 
@@ -50,7 +51,7 @@ func main() {
 	head := tview.NewTextView().SetChangedFunc(func() {
 		app.Draw()
 	})
-	head.SetBorder(true)
+	head.SetBorder(true).SetTitle(" Medusa ")
 	head.Write([]byte("Medusa rulez\n"))
 	grid.AddItem(head, 5, 1, false).SetDirection(tview.FlexRow)
 	log.SetOutput(head)
@@ -58,7 +59,7 @@ func main() {
 	footer := tview.NewTextView().SetChangedFunc(func() {
 		app.Draw()
 	})
-	footer.SetBorder(true)
+	footer.SetBorder(true).SetTitle(" Performances ")
 
 	d := mc.Download(dest, wal, urls...)
 	downloaders := make([]string, 0)
@@ -75,7 +76,7 @@ func main() {
 			log.SetOutput(head)
 			tiles = widgets.NewTiles(int(d.ContentLength))
 			tiles.AddHosts(downloaders...)
-			tiles.SetBorder(true)
+			tiles.SetBorder(true).SetTitle(" Downloads ")
 			grid.AddItem(tiles, len(downloaders)+2, 1, true).SetDirection(tview.FlexRow)
 			head.Clear()
 			grid.AddItem(footer, 3, 1, false).SetDirection(tview.FlexRow)
@@ -85,10 +86,10 @@ func main() {
 	d.OnChunk = func(chunk multiclient.Chunk) {
 		app.QueueUpdateDraw(func() {
 			tiles.AckChunk(chunk.Name)
-			dbt := float64(chunk.Size) / float64(time.Since(start))
-			ratio := 100 * float64(chunk.Size) / float64(d.ContentLength)
+			dbt := float64(time.Second) * float64(d.Written()) / float64(time.Since(start))
+			ratio := 100 * float64(d.Written()) / float64(d.ContentLength)
 			footer.Clear()
-			fmt.Fprintf(footer, "%d%% %f B/s\n", int64(ratio), dbt)
+			fmt.Fprintf(footer, "%d%% %s/s\n", int64(ratio), units.HumanSize(dbt))
 			app.Sync()
 		})
 	}
@@ -105,4 +106,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Fprintf(os.Stderr, "Download in %v", time.Since(start))
 }
