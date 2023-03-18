@@ -3,6 +3,7 @@ package widgets
 import (
 	"sync"
 
+	"github.com/athoune/medusa/multiclient"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -14,6 +15,7 @@ type Tiles struct {
 	keys          []string
 	maxSize       int
 	poz           int
+	last          int64
 	lock          *sync.Mutex
 }
 
@@ -39,10 +41,11 @@ func (t *Tiles) AddHosts(hosts ...string) {
 	t.keys = hosts
 }
 
-func (t *Tiles) AckChunk(host string) {
+func (t *Tiles) AckChunk(chunk multiclient.Chunk) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	t.tiles[host][t.poz] = 1
+	t.tiles[chunk.Name][chunk.Poz] = 1
+	t.last = chunk.Poz
 	t.poz++
 }
 
@@ -74,7 +77,7 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 		copy(fullline, []rune(k))
 		for j := start; j < t.poz; j++ {
 			if v[j] == 1 {
-				if j == t.poz-1 {
+				if int64(j) == t.last {
 					r = '📦' // tview.BlockLightShade
 				} else {
 					if start != 0 && j-start < 3 {

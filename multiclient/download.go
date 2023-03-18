@@ -20,6 +20,7 @@ import (
 type Chunk struct {
 	Name string
 	Size int64
+	Poz  int64
 }
 
 type Head struct {
@@ -126,6 +127,7 @@ func (d *Download) getAll() error {
 					if d.OnChunk != nil {
 						d.OnChunk(Chunk{
 							Name: name,
+							Poz:  b,
 							Size: int64(cpt) * d.biteSize,
 						})
 					}
