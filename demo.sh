@@ -22,5 +22,5 @@ fi
     http://debian.mirror.root.lu/debian-cd \
     http://ftp.lanet.kr/debian-cd \
 
-shasum -a 256 debian.iso
+shasum -a 256 debian-${VERSION}-amd64-netinst.iso
 grep debian-${VERSION} SHA256SUMS
