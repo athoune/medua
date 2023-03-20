@@ -17,6 +17,7 @@ type Tiles struct {
 	poz           int
 	last          int64
 	lock          *sync.Mutex
+	display       [4]int
 }
 
 func NewTiles(n int) *Tiles {
@@ -25,6 +26,7 @@ func NewTiles(n int) *Tiles {
 		numberOfChunk: n,
 		tiles:         make(map[string][]uint8),
 		lock:          &sync.Mutex{},
+		display:       [4]int{},
 	}
 	return t
 }
@@ -50,52 +52,62 @@ func (t *Tiles) AckChunk(chunk multiclient.Chunk) {
 }
 
 func (t *Tiles) Draw(screen tcell.Screen) {
-	t.SetBackgroundColor(tcell.ColorBlack)
-	t.DrawForSubclass(screen, t)
-	x, y, width, _ := t.GetInnerRect()
 	t.lock.Lock()
 	defer t.lock.Unlock()
+	x, y, width, height := t.GetInnerRect()
+	i := 0
+	var r rune
+	if t.display[0] != x || t.display[1] != y || t.display[2] != width || t.display[3] != height {
+		t.display = [4]int{x, y, width, height}
+		t.SetBackgroundColor(tcell.ColorBlack)
+		t.DrawForSubclass(screen, t)
+		for _, k := range t.keys {
+			back := tcell.ColorBlack
+			if i%2 == 0 {
+				back = tcell.ColorDarkSlateGray
+			}
+			kk := []rune(k)
+			for a := 0; a < t.maxSize; a++ {
+				if a < len(kk) {
+					r = kk[a]
+				} else {
+					if a < t.maxSize-1 {
+						r = '.'
+					} else {
+						r = ' '
+					}
+				}
+				screen.SetContent(x+a, y+i, r, nil, tcell.StyleDefault.Background(back))
+			}
+			i++
+		}
+	}
 	var start int
-	barWidth := width - 2 - t.maxSize
+	barWidth := width - t.maxSize
 	if t.poz > barWidth {
 		start = t.poz - barWidth
 	} else {
 		start = 0
 	}
-	i := 0
-	var r rune
-	fullline := make([]rune, width-x)
+	i = 0
 	for _, k := range t.keys {
 		v := t.tiles[k]
-		for a := 0; a < width-x; a++ {
-			if a < t.maxSize-1 {
-				fullline[a] = '.'
-			} else {
-				fullline[a] = ' '
-			}
+		back := tcell.ColorBlack
+		if i%2 == 0 {
+			back = tcell.ColorDarkSlateGray
 		}
-		copy(fullline, []rune(k))
 		for j := start; j < t.poz; j++ {
 			if v[j] == 1 {
 				if int64(j) == t.last {
 					r = '📦' // tview.BlockLightShade
 				} else {
-					if start != 0 && j-start < 3 {
-						r = tview.BlockLightShade
-					} else {
-						r = tview.BlockFullBlock
-					}
+					r = tview.BlockFullBlock
 				}
 			} else {
 				r = ' '
 			}
-			fullline[j-start+t.maxSize] = r
+			screen.SetContent(x+t.maxSize+j-start, y+i, r, nil, tcell.StyleDefault.Background(back))
 		}
-		back := tcell.ColorBlack
-		if i%2 == 0 {
-			back = tcell.ColorDarkSlateGray
-		}
-		screen.SetContent(x, y+i, fullline[0], fullline[1:], tcell.StyleDefault.Background(back))
 		i++
 	}
 }
