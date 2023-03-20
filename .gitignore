@@ -1,4 +1,4 @@
 bin
-debian.iso
-debian.iso.wal
+debian-11.6.0-amd64-netinst.iso
+debian-11.6.0-amd64-netinst.iso.wal
 SHA256SUMS

@@ -114,7 +114,7 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 					r = tview.BlockFullBlock
 				}
 			} else {
-				r = ' '
+				r = '.'
 			}
 			screen.SetContent(x+t.maxSize+j-start, y+i, r, nil, tcell.StyleDefault.Background(back))
 		}

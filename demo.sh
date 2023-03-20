@@ -11,16 +11,16 @@ then
 	curl -O https://cdimage.debian.org/debian-cd/${VERSION}/amd64/iso-cd/SHA256SUMS
 fi
 
-./bin/medusa-get debian.iso \
-    http://debian.koyanet.lv/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    http://debian.anexia.at/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    http://ftp.crifo.org/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    http://debian.obspm.fr/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    https://ftp.cica.es/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    http://ftp.ps.pl/pub/Linux/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    http://debian.mirror.root.lu/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    http://ftp.lanet.kr/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
-    https://cdimage.debian.org/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso
+./bin/medusa-get \
+    https://cdimage.debian.org/debian-cd/${VERSION}/amd64/iso-cd/debian-${VERSION}-amd64-netinst.iso \
+    http://debian.koyanet.lv/debian-cd \
+    http://debian.anexia.at/debian-cd \
+    http://ftp.crifo.org/debian-cd \
+    http://debian.obspm.fr/debian-cd \
+    https://ftp.cica.es/debian-cd \
+    http://ftp.ps.pl/pub/Linux/debian-cd \
+    http://debian.mirror.root.lu/debian-cd \
+    http://ftp.lanet.kr/debian-cd \
 
 shasum -a 256 debian.iso
 grep debian-${VERSION} SHA256SUMS

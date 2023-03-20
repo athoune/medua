@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/athoune/medusa/multiclient"
@@ -15,21 +16,35 @@ import (
 )
 
 func main() {
-	if len(os.Args) <= 2 {
-		log.Fatal(os.Args[0], "destination urls…")
+	if len(os.Args) < 2 {
+		log.Fatal(os.Args[0], "urls…")
 	}
-	urls := make([]*http.Request, len(os.Args)-2)
-	for i, u := range os.Args[2:] {
+	urls := make([]*http.Request, len(os.Args)-1)
+	var filename string
+	var slugs []string
+	for i, u := range os.Args[1:] {
 		uu, err := url.Parse(u)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if i == 0 {
+			slugs = strings.Split(uu.Path, "/")
+			filename = slugs[len(slugs)-1]
+		} else {
+			s := strings.Split(uu.Path, "/")
+			for i, slug := range slugs {
+				if s[len(s)-1] == slug {
+					uu.Path += "/" + strings.Join(slugs[i+1:], "/")
+					break
+				}
+			}
 		}
 		urls[i] = &http.Request{
 			Method: http.MethodGet,
 			URL:    uu,
 		}
 	}
-	wal, err := os.OpenFile(os.Args[1]+".wal", os.O_CREATE+os.O_RDWR, 0600)
+	wal, err := os.OpenFile(filename+".wal", os.O_CREATE+os.O_RDWR, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +52,7 @@ func main() {
 	mc := multiclient.New(1024 * 1024) // 1Mo
 	mc.Timeout = 5 * time.Second
 
-	dest, err := os.OpenFile(os.Args[1], os.O_WRONLY+os.O_CREATE, 0600)
+	dest, err := os.OpenFile(filename, os.O_WRONLY+os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
