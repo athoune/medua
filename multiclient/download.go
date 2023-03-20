@@ -42,6 +42,7 @@ type Download struct {
 	OnHead        func(Head)
 	OnHeadEnd     func()
 	OnChunk       func(Chunk)
+	OnStopped     func(string)
 }
 
 func (d *Download) clean() {
@@ -115,6 +116,9 @@ func (d *Download) getAll() error {
 						todo.Reset(b)
 						oops <- err
 						log.Println("lets stop ", name, err)
+						if d.OnStopped != nil {
+							d.OnStopped(name)
+						}
 						return // lets kill this worker
 					}
 					err = todo.Done(b) // ack

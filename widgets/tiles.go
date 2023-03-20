@@ -18,6 +18,7 @@ type Tiles struct {
 	last          int64
 	lock          *sync.Mutex
 	display       [4]int
+	Stopped       []string
 }
 
 func NewTiles(n int) *Tiles {
@@ -27,6 +28,7 @@ func NewTiles(n int) *Tiles {
 		tiles:         make(map[string][]uint8),
 		lock:          &sync.Mutex{},
 		display:       [4]int{},
+		Stopped:       make([]string, 0),
 	}
 	return t
 }
@@ -107,6 +109,11 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 				r = ' '
 			}
 			screen.SetContent(x+t.maxSize+j-start, y+i, r, nil, tcell.StyleDefault.Background(back))
+		}
+		for _, name := range t.Stopped {
+			if name == k {
+				screen.SetContent(x+t.maxSize-1, y+i, '🪦', nil, tcell.StyleDefault.Background(back))
+			}
 		}
 		i++
 	}

@@ -93,6 +93,9 @@ func main() {
 			app.Sync()
 		})
 	}
+	d.OnStopped = func(name string) {
+		tiles.Stopped = append(tiles.Stopped, name)
+	}
 
 	go func() {
 		err = d.Fetch()
