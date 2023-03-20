@@ -19,9 +19,10 @@ type Tiles struct {
 	lock          *sync.Mutex
 	display       [4]int
 	Stopped       []string
+	done          func() []bool
 }
 
-func NewTiles(n int) *Tiles {
+func NewTiles(n int, done func() []bool) *Tiles {
 	t := &Tiles{
 		Box:           tview.NewBox(),
 		numberOfChunk: n,
@@ -29,6 +30,7 @@ func NewTiles(n int) *Tiles {
 		lock:          &sync.Mutex{},
 		display:       [4]int{},
 		Stopped:       make([]string, 0),
+		done:          done,
 	}
 	return t
 }
@@ -84,6 +86,12 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 			i++
 		}
 	}
+	done := t.done()
+	for i, d := range done {
+		if d {
+			t.poz = i
+		}
+	}
 	var start int
 	barWidth := width - t.maxSize
 	if t.poz > barWidth {
@@ -116,5 +124,28 @@ func (t *Tiles) Draw(screen tcell.Screen) {
 			}
 		}
 		i++
+	}
+	for j := start; j < t.poz; j++ {
+		cpt := 0
+		total := 0
+		for i := 0; i < int(t.last); i++ {
+			if done[i] {
+				cpt++
+			}
+			total++
+		}
+		/* FIXME result is weird
+		for i, f := range []rune(fmt.Sprintf("%d%%", 100*cpt/total)) {
+			screen.SetContent(x+i, len(t.keys)+y, f, nil, tcell.StyleDefault)
+		}
+		*/
+		if j < len(done) {
+			if done[j] {
+				r = tview.BlockFullBlock
+			} else {
+				r = tview.BlockLightShade
+			}
+			screen.SetContent(x+t.maxSize+j-start, len(t.keys)+y, r, nil, tcell.StyleDefault)
+		}
 	}
 }

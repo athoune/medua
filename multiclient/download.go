@@ -43,6 +43,7 @@ type Download struct {
 	OnHeadEnd     func()
 	OnChunk       func(Chunk)
 	OnStopped     func(string)
+	done          []bool
 }
 
 func (d *Download) clean() {
@@ -97,6 +98,10 @@ func (d *Download) getAll() error {
 			return err
 		}
 	}
+	d.done = make([]bool, int(bites))
+	for i, b := range todo.Doing() {
+		d.done[i] = b
+	}
 
 	oops := make(chan error, len(d.reqs))
 	for _, req := range d.reqs {
@@ -127,6 +132,7 @@ func (d *Download) getAll() error {
 						oops <- err
 						return
 					}
+					d.done[b] = true
 					cpt++
 					d.written += d.biteSize
 					if d.OnChunk != nil {
@@ -194,4 +200,8 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 		return err
 	}
 	return nil
+}
+
+func (d *Download) Done() []bool {
+	return d.done
 }

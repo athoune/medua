@@ -74,10 +74,10 @@ func main() {
 		app.QueueUpdateDraw(func() {
 			// body.Clear()
 			log.SetOutput(head)
-			tiles = widgets.NewTiles(int(d.ContentLength))
+			tiles = widgets.NewTiles(int(d.ContentLength), d.Done)
 			tiles.AddHosts(downloaders...)
 			tiles.SetBorder(true).SetTitle(" Downloads ")
-			grid.AddItem(tiles, len(downloaders)+2, 1, true).SetDirection(tview.FlexRow)
+			grid.AddItem(tiles, len(downloaders)+3, 1, true).SetDirection(tview.FlexRow)
 			head.Clear()
 			grid.AddItem(footer, 3, 1, false).SetDirection(tview.FlexRow)
 		})

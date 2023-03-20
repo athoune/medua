@@ -62,3 +62,7 @@ func (t *Todo) Done(poz int64) error {
 	}
 	return nil
 }
+
+func (t *Todo) Doing() []bool {
+	return t.doing
+}
