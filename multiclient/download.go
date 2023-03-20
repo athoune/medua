@@ -38,6 +38,7 @@ type Download struct {
 	biteSize      int64
 	written       int64
 	wal           *os.File
+	Timeout       time.Duration
 	OnHead        func(Head)
 	OnHeadEnd     func()
 	OnChunk       func(Chunk)
@@ -159,7 +160,9 @@ func (d *Download) getAll() error {
 }
 
 func (d *Download) getOne(offset int64, name string, r *http.Request) error {
-	//ts := time.Now()
+	ctx, cancel := context.WithTimeout(r.Context(), d.Timeout)
+	defer cancel()
+	r = r.WithContext(ctx)
 	end := offset + d.biteSize - 1
 	if end >= d.ContentLength {
 		end = d.ContentLength - 1
@@ -169,6 +172,7 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 	}
 	r.Header.Set("user-agent", "Medusa")
 	r.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
+
 	resp, err := d.client.Do(r)
 	if err != nil {
 		return err
@@ -185,6 +189,5 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 			resp.Header.Get("content-length"), err)
 		return err
 	}
-	//log.Printf("%s %d-%d %v\n", r.URL.Host, offset, end, time.Since(ts))
 	return nil
 }

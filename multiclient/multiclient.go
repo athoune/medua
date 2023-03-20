@@ -35,6 +35,7 @@ func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*ht
 		client:   mc.client,
 		biteSize: mc.biteSize,
 		cake:     cake.New(writer),
+		Timeout:  30 * time.Second,
 		wal:      wal,
 	}
 }
