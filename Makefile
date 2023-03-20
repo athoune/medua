@@ -17,3 +17,7 @@ test:
 
 clean:
 	rm -rf bin
+
+linux:
+	GOOS=linux make all
+	upx bin/*
