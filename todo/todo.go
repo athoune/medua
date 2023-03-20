@@ -34,9 +34,7 @@ func (t *Todo) Reset(poz int64) error {
 		}
 	}
 	t.doing[poz] = false
-	if poz < t.cursor {
-		t.cursor = poz
-	}
+	t.cursor = 0 // YOLO, Next will do the math
 	return nil
 }
 
