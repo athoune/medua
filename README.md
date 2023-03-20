@@ -35,6 +35,7 @@ All URL are tested with a HEAD, and size file is checked.
 Some server doesn't like multiple connection, and answer 429.
 
 The file is split in 1Mb chunks.
+The `Range` header is used to pick the right chunk.
 Connection is done with a timeout.
 Downloading a chunk has an other timeout.
 Failed download destroy the downloader.
