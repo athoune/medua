@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/docker/go-units v0.5.0
 	github.com/gdamore/tcell/v2 v2.6.0
-	github.com/rivo/tview v0.0.0-20230307144320-cc10b288e304
+	github.com/rivo/tview v0.0.0-20230320095235-84f9c0ff9de8
 	github.com/stretchr/testify v1.8.2
 )
 
