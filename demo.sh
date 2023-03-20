@@ -2,9 +2,9 @@
 
 VERSION=11.6.0
 
-if [ ! -e debian.iso.wal ]
+if [ ! -e debian-${VERSION}-amd64-netinst.iso.wal ]
 then
-	rm -f debian.iso
+	rm -f debian-${VERSION}-amd64-netinst.iso
 fi
 if [ ! -e SHA256SUMS ]
 then
