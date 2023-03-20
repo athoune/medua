@@ -84,7 +84,7 @@ func main() {
 		start = time.Now()
 	}
 	d.OnChunk = func(chunk multiclient.Chunk) {
-		app.QueueUpdateDraw(func() {
+		app.QueueUpdate(func() {
 			tiles.AckChunk(chunk)
 			dbt := float64(time.Second) * float64(d.Written()) / float64(time.Since(start))
 			ratio := 100 * float64(d.Written()) / float64(d.ContentLength)
