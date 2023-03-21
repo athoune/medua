@@ -6,8 +6,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/athoune/medusa/cake"
 )
 
 type Multiclient struct {
@@ -30,12 +28,5 @@ func New(biteSize int64) *Multiclient {
 }
 
 func (mc *Multiclient) Download(writer io.WriteSeeker, wal *os.File, reqs ...*http.Request) *Download {
-	return &Download{
-		reqs:     reqs,
-		client:   mc.client,
-		biteSize: mc.biteSize,
-		cake:     cake.New(writer),
-		Timeout:  30 * time.Second,
-		wal:      wal,
-	}
+	return NewDownload(mc.client, mc.biteSize, writer, wal, reqs...)
 }

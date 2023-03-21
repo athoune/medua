@@ -21,6 +21,10 @@ fi
     http://ftp.ps.pl/pub/Linux/debian-cd \
     http://debian.mirror.root.lu/debian-cd \
     http://ftp.lanet.kr/debian-cd \
+    http://mirror.checkdomain.de/debian-cd \
+    http://mirror.as35701.net/debian-cd \
+    http://mirror.asergo.com/debian-cd \
+    http://giano.com.dist.unige.it/debian-cd \
 
 shasum -a 256 debian-${VERSION}-amd64-netinst.iso
 grep debian-${VERSION} SHA256SUMS

@@ -13,14 +13,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VividCortex/ewma"
 	"github.com/athoune/medusa/cake"
 	_todo "github.com/athoune/medusa/todo"
 )
 
 type Chunk struct {
-	Name string
-	Size int64
-	Poz  int64
+	Name     string
+	Size     int64
+	Poz      int64
+	Duration time.Duration
 }
 
 type Head struct {
@@ -44,6 +46,19 @@ type Download struct {
 	OnChunk       func(Chunk)
 	OnStopped     func(string)
 	done          []bool
+	ewma          ewma.MovingAverage
+}
+
+func NewDownload(client *http.Client, bitesize int64, writer io.WriteSeeker, wal *os.File, reqs ...*http.Request) *Download {
+	return &Download{
+		reqs:     reqs,
+		client:   client,
+		biteSize: bitesize,
+		cake:     cake.New(writer),
+		Timeout:  30 * time.Second,
+		wal:      wal,
+		ewma:     ewma.NewMovingAverage(),
+	}
 }
 
 func (d *Download) clean() {
@@ -115,6 +130,7 @@ func (d *Download) getAll() error {
 						oops <- io.EOF
 						return
 					}
+					ts := time.Now()
 					err := d.getOne(b*d.biteSize, name, req)
 					if err != nil {
 						// the fetch has failed, lets retry with another worker
@@ -135,11 +151,14 @@ func (d *Download) getAll() error {
 					d.done[b] = true
 					cpt++
 					d.written += d.biteSize
+					duration := time.Since(ts)
+					d.ewma.Add(float64(duration))
 					if d.OnChunk != nil {
 						d.OnChunk(Chunk{
-							Name: name,
-							Poz:  b,
-							Size: int64(cpt) * d.biteSize,
+							Name:     name,
+							Poz:      b,
+							Size:     int64(cpt) * d.biteSize,
+							Duration: duration,
 						})
 					}
 					oops <- nil // one bite done
@@ -204,4 +223,9 @@ func (d *Download) getOne(offset int64, name string, r *http.Request) error {
 
 func (d *Download) Done() []bool {
 	return d.done
+}
+
+// Speed return last bite speed in bytes per second
+func (d *Download) Speed() float64 {
+	return float64(d.biteSize) / (d.ewma.Value() / float64(time.Second))
 }
