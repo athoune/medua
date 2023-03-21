@@ -1,6 +1,7 @@
 package multiclient
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -67,6 +68,8 @@ func (d *Download) head() error {
 			}
 			// Lets restore initial method : GET
 			r.Method = http.MethodGet
+			latency := time.Since(ts)
+			r = r.WithContext(context.WithValue(r.Context(), "latency", latency))
 
 			d.lock.Lock()
 			usable = append(usable, r)
@@ -76,7 +79,7 @@ func (d *Download) head() error {
 				for i := 0; i < 3; i++ {
 					d.OnHead(Head{
 						Domain:  fmt.Sprintf("%s#%d", r.URL.Hostname(), i),
-						Latency: time.Since(ts),
+						Latency: latency,
 						Size:    d.ContentLength,
 					})
 				}
