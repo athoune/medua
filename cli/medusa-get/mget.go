@@ -105,7 +105,6 @@ func main() {
 			ratio := 100 * float64(d.Written()) / float64(d.ContentLength)
 			footer.Clear()
 			fmt.Fprintf(footer, "%02d%% %s/s ETA: %v\n", int64(ratio), units.HumanSize(dbt), time.Duration(float64(d.ContentLength-d.Written())/dbt*1000000000))
-			app.Sync()
 		})
 	}
 	d.OnStopped = func(name string) {
