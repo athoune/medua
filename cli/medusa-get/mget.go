@@ -101,7 +101,7 @@ func main() {
 	d.OnChunk = func(chunk multiclient.Chunk) {
 		app.QueueUpdate(func() {
 			tiles.AckChunk(chunk)
-			dbt := float64(time.Second) * float64(d.Written()) / float64(time.Since(start))
+			dbt := d.Speed()
 			ratio := 100 * float64(d.Written()) / float64(d.ContentLength)
 			footer.Clear()
 			fmt.Fprintf(footer, "%02d%% %s/s ETA: %v\n", int64(ratio), units.HumanSize(dbt), time.Duration(float64(d.ContentLength-d.Written())/dbt*1000000000))
